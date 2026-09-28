@@ -64,7 +64,7 @@ jobs:
       - name: Set release version for CLI
         run: |
           cd cli
-          npm ci
+          npm ci --ignore-scripts
           npm version ${{ github.event.inputs.version }} --git-tag-version=false
           npm run build
 

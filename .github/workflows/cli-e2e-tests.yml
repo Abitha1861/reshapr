@@ -27,7 +27,7 @@ jobs:
 
       - name: Install CLI dependencies
         working-directory: cli
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build CLI
         working-directory: cli
