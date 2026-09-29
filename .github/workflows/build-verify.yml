@@ -60,6 +60,43 @@ jobs:
       image-tag: ${{ steps.set-environment.outputs.IMAGE_TAG }}
       package-image: ${{ steps.set-environment.outputs.PACKAGE_IMAGE }}
 
+  cli-lint:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Detect cli/ changes
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          token: '' # force local git diff instead of the GitHub API (no extra permission needed)
+          filters: |
+            cli:
+              - 'cli/**'
+
+      - name: Set Node.js 22.x
+        if: steps.filter.outputs.cli == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.1
+          cache: 'npm'
+          cache-dependency-path: 'cli/package-lock.json'
+
+      - name: Install CLI dependencies
+        if: steps.filter.outputs.cli == 'true'
+        working-directory: cli
+        run: npm ci --ignore-scripts
+
+      - name: Lint CLI
+        if: steps.filter.outputs.cli == 'true'
+        working-directory: cli
+        run: npm run lint
+
   container-images-build:
     needs:
       - build-install

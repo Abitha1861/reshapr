@@ -35,7 +35,7 @@ export const attachCommand = new Command('attach')
       process.exit(1);
     }
 
-    let body: any;
+    let body: unknown;
 
     if (options.file) {
       if (!fs.existsSync(options.file)) {

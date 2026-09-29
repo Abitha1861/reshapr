@@ -20,12 +20,13 @@ import { ConfigUtil } from "../utils/config.js";
 import { openUpdateEditor } from "../utils/editor.js";
 import { Context } from '../utils/context.js';
 import { CLI_LABEL } from '../constants.js';
+import type { Secret, SecretAuthMethod } from '../types/models.js';
 
 export const secretCommand = program.command('secret')
   .description(`Manage secrets in ${CLI_LABEL}`);
 
 /** The authMethod discriminator value for OAuth2 Client Credentials backend authentication. */
-const OAUTH2_CLIENT_CREDENTIALS = 'OAUTH2_CLIENT_CREDENTIALS';
+const OAUTH2_CLIENT_CREDENTIALS: SecretAuthMethod = 'OAUTH2_CLIENT_CREDENTIALS';
 
 /* List all secrets */
 secretCommand.command('list')
@@ -55,14 +56,14 @@ secretCommand.command('list')
         const longestName = longestSecretName(data) + 1; // +1 for padding
 
         Logger.log(`${'ID'.padEnd(13, ' ')}  ${'NAME'.padEnd(longestName, ' ')} TYPE      DESCRIPTION`);
-        data.forEach((secret: any) => {
+        data.forEach((secret: Secret) => {
           Logger.log(`${secret.id}  ${secret.name.padEnd(longestName, ' ')} ${secret.type}  ${secret.description || ''}`);
         });
       }
     }
   });
 
-function longestSecretName(secrets: any[]) {
+function longestSecretName(secrets: Secret[]) {
   return secrets.reduce((max, secret) => {
     return Math.max(max, secret.name.length);
   }, 0);
@@ -85,7 +86,7 @@ secretCommand.command('get <id>')
       process.exit(1);
     }
 
-    const data = await response.json();
+    const data: Secret = await response.json();
     Context.put('secret', data);
 
     Logger.info('Secret details');
@@ -149,7 +150,7 @@ secretCommand.command('create <name>')
   .option('-o, --output <format>', 'Output format (json, yaml)')
   .action(async (name, options) => {
     // Initialize the secret object.
-    let secret : any = {
+    const secret: Secret = {
       name: name,
       description: options.description || '',
     }
@@ -215,7 +216,7 @@ secretCommand.command('create-elicitation <name>')
   .option('-o, --output <format>', 'Output format (json, yaml)')
   .action(async (name, options) => {
     // Initialize the secret object.
-    let secret : any = {
+    const secret: Secret = {
       name: name,
       description: options.description || '',
       type: 'ENDPOINT',
@@ -278,7 +279,7 @@ secretCommand.command('create-client-credentials <name>')
       .filter((s: string) => s.length > 0);
 
     // Initialize the secret object.
-    const secret: any = {
+    const secret: Secret = {
       name: name,
       description: options.description || '',
       type: 'ENDPOINT',
@@ -336,7 +337,7 @@ secretCommand.command('update <id>')
       const secret = await response.json();
       Logger.info(`Opening editor for secret: ${secret.name}`);
 
-      await openUpdateEditor(secret, async (modifiedSecret: any) => {
+      await openUpdateEditor(secret, async (modifiedSecret: Secret) => {
         // Enforce properties that are immutable.
         modifiedSecret.id = secret.id; // Ensure the ID remains the same.
         modifiedSecret.organizationId = secret.organizationId; // Ensure the organization ID remains the same.

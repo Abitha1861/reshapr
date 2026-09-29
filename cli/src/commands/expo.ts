@@ -21,6 +21,7 @@ import { ageFrom } from "../utils/age.js";
 import { formatExpositionEndpoints, buildExpositionSlug } from "../utils/format.js";
 import { Context } from "../utils/context.js";
 import { CLI_LABEL } from '../constants.js';
+import type { ActiveExposition, ConfigurationPlan, Exposition, GatewayEndpoint, ServiceSummary } from '../types/models.js';
 
 export const expoCommand = program.command('expo')
   .description(`Manage expositions in ${CLI_LABEL}`);
@@ -58,7 +59,7 @@ expoCommand.command('list')
         const longestBackend = longestBackendEndpoint(data) + 1; // +1 for padding
 
         Logger.log(`${'ID'.padEnd(13, ' ')}  ${'SERVICE'.padEnd(longestName, ' ')} ${'BACKEND'.padEnd(longestBackend, ' ')} AGE`);
-        data.forEach((expo: any) => {
+        data.forEach((expo: Exposition) => {
           Logger.log(`${expo.id}  ${(expo.service.name + ':' +  expo.service.version).padEnd(longestName, ' ')} ${expo.configurationPlan.backendEndpoint.padEnd(longestBackend, ' ')} ${ageFrom(expo.createdOn)}`);
         });
       }
@@ -90,35 +91,35 @@ expoCommand.command('list')
         const longestEndpoints = longestGatewaysFQDNs(data) + 1; // +1 for padding
 
         Logger.log(`${'ID'.padEnd(13, ' ')}  ${'SERVICE'.padEnd(longestName, ' ')} ${'BACKEND'.padEnd(longestBackend, ' ')} ${'ENDPOINTS'.padEnd(longestEndpoints, ' ')} AGE`);
-        data.forEach((expo: any) => {
-          let allFqdns = uniqueFQDNs(expo.gateways);
+        data.forEach((expo: ActiveExposition) => {
+          const allFqdns = uniqueFQDNs(expo.gateways);
           Logger.log(`${expo.id}  ${(expo.service.name + ':' +  expo.service.version).padEnd(longestName, ' ')} ${expo.configurationPlan.backendEndpoint.padEnd(longestBackend, ' ')} ${allFqdns.join(',').padEnd(longestEndpoints, ' ')} ${ageFrom(expo.createdOn)}`);
         });
       }
     }    
   });
 
-function longestServiceName(expos: any[]) {
+function longestServiceName(expos: Exposition[]) {
   return expos.reduce((max, expo) => {
     return Math.max(max, expo.service.name.length + expo.service.version.length + 1);
   }, 0);
 }  
 
-function longestBackendEndpoint(expos: any[]) {
+function longestBackendEndpoint(expos: Exposition[]) {
   return expos.reduce((max, expo) => {
     return Math.max(max, expo.configurationPlan.backendEndpoint ? expo.configurationPlan.backendEndpoint.length : 0);
   }, 0);
 }
 
-function uniqueFQDNs(gateways: { fqdns: string[]; }[]): string[] {
-  let allFqdns: string[] = [];
+function uniqueFQDNs(gateways: GatewayEndpoint[]): string[] {
+  const allFqdns: string[] = [];
   gateways.forEach(gateway => {
     gateway.fqdns.filter(fqdn => !allFqdns.includes(fqdn)).forEach(fqdn => allFqdns.push(fqdn));
   });
   return allFqdns;
 }
 
-function longestGatewaysFQDNs(expos: any[]) {
+function longestGatewaysFQDNs(expos: ActiveExposition[]) {
   return expos.reduce((max, expo) => {
     return Math.max(max, uniqueFQDNs(expo.gateways).join(',').length);
   }, 0);
@@ -141,7 +142,7 @@ expoCommand.command('get <id>')
       process.exit(1);
     }
 
-    const exposition = await response.json();
+    const exposition: Exposition = await response.json();
     Context.put('exposition', exposition);
     await displayExpositionDetails(exposition);
   });
@@ -189,7 +190,7 @@ expoCommand.command('create')
       process.exit(1);
     }
 
-    const data = await response.json().catch(err => {
+    const data: Exposition = await response.json().catch(err => {
       Logger.error('Error parsing exposition creation response: ' + err.message);
       process.exit(1);
     });
@@ -218,7 +219,7 @@ expoCommand.command('delete <id>')
     Logger.success(`Exposition ${id} deleted successfully.`);
   });
 
-async function displayExpositionDetails(exposition: any) {
+async function displayExpositionDetails(exposition: Exposition) {
   Logger.info('Exposition details');
   Logger.log(`ID          : ${exposition.id}`);
   Logger.log(`Name        : ${exposition.name || '(unnamed)'}`);
@@ -254,16 +255,16 @@ async function displayExpositionDetails(exposition: any) {
     process.exit(0);
   }
 
-  const activeExpositions = await activeResponse.json();
+  const activeExpositions: ActiveExposition = await activeResponse.json();
   Context.put('gateways', activeExpositions.gateways);
 
-  let allFqdns = uniqueFQDNs(activeExpositions.gateways);
+  const allFqdns = uniqueFQDNs(activeExpositions.gateways);
   Context.put('endpoints', allFqdns.flatMap(
     fqdn => formatExpositionEndpoints(fqdn, exposition)
   ));
 
   Logger.bold('Gateway Endpoints');
-  activeExpositions.gateways.forEach((gateway: { id: string; name: string; fqdns: string[]; }) => {
+  activeExpositions.gateways.forEach((gateway: GatewayEndpoint) => {
     Logger.log(`  - ID       : ${gateway.id}`);
     Logger.log(`    Name     : ${gateway.name}`);
     Logger.log(`    Endpoints: ${gateway.fqdns.flatMap(
@@ -306,7 +307,7 @@ async function buildDefaultExpositionName(configurationPlanId: string): Promise<
     process.exit(1);
   }
 
-  const plan = await planResponse.json();
+  const plan: ConfigurationPlan = await planResponse.json();
 
   // Service resolution is best-effort: it only enriches the suggested slug.
   try {
@@ -315,7 +316,7 @@ async function buildDefaultExpositionName(configurationPlanId: string): Promise<
       Logger.warn(`Could not resolve service '${plan.serviceId}' to suggest a default name (${serviceResponse.status} ${serviceResponse.statusText}).`);
       return undefined;
     }
-    const service = await serviceResponse.json();
+    const service: ServiceSummary = await serviceResponse.json();
     return buildExpositionSlug(service.name, service.version, plan.name);
   } catch (err) {
     Logger.warn(`Could not resolve service '${plan.serviceId}' to suggest a default name: ${(err as Error).message}`);

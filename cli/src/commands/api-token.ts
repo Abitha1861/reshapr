@@ -50,14 +50,14 @@ tokenCommand.command('list')
         const longestName = longestTokenName(data) + 1; // +1 for padding
 
         Logger.log(`${'ID'.padEnd(13, ' ')}  ${'NAME'.padEnd(longestName, ' ')} VALID UNTIL`);
-        data.forEach((token: any) => {
+        data.forEach((token: { id: string; name: string; validUntil: string }) => {
           Logger.log(`${token.id.padEnd(13, ' ')}  ${token.name.padEnd(longestName, ' ')} ${new Date(token.validUntil).toUTCString()}`);
         });
       }
     }
   });
 
-function longestTokenName(tokens: any[]) {
+function longestTokenName(tokens: {name: string}[]) {
   return tokens.reduce((max, token) => {
     return Math.max(max, token.name.length);
   }, 0);
@@ -69,7 +69,7 @@ tokenCommand.command('create <name>')
   .addOption(new Option('-v, --validity-days <days>', 'Number of days the token is valid for').choices(['1', '7', '30', '90']))  
   .action(async (name: string, options) => {
     // Initialize the token request object.
-    let tokenRequest : any = {
+    const tokenRequest = {
       name: name,
       validityDays: 30
     }

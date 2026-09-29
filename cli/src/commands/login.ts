@@ -54,7 +54,7 @@ export const loginCommand = new Command('login')
     // First validate server URL and fetch server configuration.
     const configResponse = await fetch(`${options.server}/api/config`, {
       method: 'GET'
-    }).catch(err => {
+    }).catch(() => {
       Logger.error('Failed to connect to the server. Check URL.');
       process.exit(1);
     });
@@ -85,7 +85,7 @@ export const loginCommand = new Command('login')
     });
   }
 
-  async function handleLoginPasswordLogin(options: any) {
+  async function handleLoginPasswordLogin(options: {username?: string; password?: string; server: string; insecure?: boolean}) {
     // Handle on-premises login logic here if needed.
     if (!options.username) {
       const username = await inquirer.prompt({
@@ -136,7 +136,7 @@ export const loginCommand = new Command('login')
       Logger.success('Login successful!');
       Logger.info(`Welcome, ${options.username}!`);
       // Here you would typically save the authentication token or session.
-      let config = {
+      const config = {
         username: options.username,
         server: options.server,
         insecure: options.insecure,
@@ -149,17 +149,17 @@ export const loginCommand = new Command('login')
     });
   }
 
-  async function handleOidcLogin(options: any) {
+  async function handleOidcLogin(options: {username?: string; password?: string; server: string; insecure?: boolean}) {
     // Use the control plane's OIDC login flow for authentication.
     await handleAuthenticationBrowserFlow(`${options.server}/auth/login/oidc`, options);
   }
 
-  async function handleSaaSLogin(options: any) {
+  async function handleSaaSLogin(options: {username?: string; password?: string; server: string; insecure?: boolean}) {
     // Use the Saas /cli/login endpoint flow for authentication.
     await handleAuthenticationBrowserFlow(`${options.server}/cli/login`, options);
   }
 
-  async function handleAuthenticationBrowserFlow(authServerUrl: string, options: any) {
+  async function handleAuthenticationBrowserFlow(authServerUrl: string, options: {username?: string; password?: string; server: string; insecure?: boolean}) {
     // Prepare a token for reception.
     let token: string | null = null;
 
@@ -277,7 +277,7 @@ export const loginCommand = new Command('login')
       }
     });
 
-    server.on('error', (err: any) => {
+    server.on('error', (err: Error) => {
       Logger.error('Failed to start local server for authentication: ' + err.message);
       process.exit(1);
     });

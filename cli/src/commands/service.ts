@@ -56,25 +56,25 @@ serviceCommand.command('list')
       const longestType = longestServiceType(data) + 1; // +1 for padding
 
       Logger.log(`${'ID'.padEnd(13, ' ')}  ${'NAME'.padEnd(longestName, ' ')} ${'VERSION'.padEnd(Math.max(longestVersion, 7), ' ')}  ${'TYPE'.padEnd(longestType, ' ')} AGE`);
-      data.forEach((service: any) => {
+      data.forEach((service: {id: string; name: string; version: string; type: string; createdOn: string}) => {
         Logger.log(`${service.id}  ${service.name.padEnd(longestName, ' ')} ${service.version.padEnd(Math.max(longestVersion, 7), ' ')}  ${service.type.padEnd(longestType, ' ')} ${ageFrom(service.createdOn)}`);
       });
     }
   });
 
-function longestServiceName(services: any[]) {
+function longestServiceName(services: {name: string}[]) {
   return services.reduce((max, service) => {
     return Math.max(max, service.name.length);
   }, 0);
 }
 
-function longestServiceVersion(services: any[]) {
+function longestServiceVersion(services: {version: string}[]) {
   return services.reduce((max, service) => {
     return Math.max(max, service.version.length);
   }, 0);
 }
 
-function longestServiceType(services: any[]) {
+function longestServiceType(services: {type: string}[]) {
   return services.reduce((max, service) => {
     return Math.max(max, service.type.length);
   }, 0);
@@ -113,7 +113,7 @@ serviceCommand.command('get <id>')
       Logger.log(`Created     : ${data.createdOn}`);
       Logger.bold('Operations :');
       if (data.operations && data.operations.length > 0) {
-        data.operations.forEach((op: any) => {
+        data.operations.forEach((op: {name: string; inputName?: string; outputName?: string}) => {
           Logger.log(`  - Name: ${op.name}`);
           if (op.inputName) {
             Logger.log(`    Input: ${op.inputName}`);

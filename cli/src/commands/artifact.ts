@@ -58,7 +58,7 @@ artifactCommand.command('list')
         const longestType = longestArtifactType(data); // +1 for padding
 
         Logger.log(`${'ID'.padEnd(13, ' ')}  ${'NAME'.padEnd(longestName, ' ')} ${'TYPE'.padEnd(longestType, ' ')} ${'MAIN'.padEnd(5, ' ')} CAPS`);
-        data.forEach((artifact: any) => {
+        data.forEach((artifact: { id: string; name: string; type: string; mainArtifact: boolean; capabilities: unknown[] }) => {
           const capsCount = Array.isArray(artifact.capabilities) ? artifact.capabilities.length : 0;
           Logger.log(`${artifact.id}  ${artifact.name.padEnd(longestName, ' ')} ${artifact.type.padEnd(longestType, ' ')} ${(artifact.mainArtifact ? 'Yes' : 'No').padEnd(5, ' ')} ${capsCount}`);
         });
@@ -66,13 +66,13 @@ artifactCommand.command('list')
     }
   });
 
-function longestArtifactName(artifacts: any[]) {
+function longestArtifactName(artifacts: {name: string}[]) {
   return artifacts.reduce((max, artifact) => {
     return Math.max(max, artifact.name.length + 1);
   }, 0);
 }
 
-function longestArtifactType(artifacts: any[]) {
+function longestArtifactType(artifacts: {type: string}[]) {
     return artifacts.reduce((max, artifact) => {
         return Math.max(max, artifact.type.length + 1);
     }, 0);
@@ -178,14 +178,14 @@ artifactCommand.command('delete <id>')
     }
   });
 
-function printDeletionImpact(impact: any) {
+function printDeletionImpact(impact: {impactedPlans: {name: string; id: string; fallsBackToAll: boolean}[]}) {
   const plans = Array.isArray(impact?.impactedPlans) ? impact.impactedPlans : [];
   if (plans.length === 0) {
     Logger.info('No configuration plan references this artifact.');
     return;
   }
   Logger.info(`${plans.length} configuration plan(s) reference this artifact and will be updated:`);
-  plans.forEach((plan: any) => {
+  plans.forEach((plan: {name: string; id: string; fallsBackToAll: boolean}) => {
     const suffix = plan.fallsBackToAll
       ? ' (selection becomes empty → falls back to all attached artifacts)'
       : '';

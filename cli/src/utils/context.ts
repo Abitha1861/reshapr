@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 export class Context {
-  static currentContext: Record<string, any> = {};
+  static currentContext: Record<string, unknown> = {};
 
-  static put(key: string, value: any) {
+  static put(key: string, value: unknown) {
     Context.currentContext[key] = value;
   }
 
@@ -28,11 +28,11 @@ export class Context {
     return Object.keys(Context.currentContext).length;
   }
 
-  static get(key: string): any {
+  static get(key: string): unknown {
     return Context.currentContext[key];
   }
 
-  static getAll(): Record<string, any> {
+  static getAll(): Record<string, unknown> {
     return Context.currentContext;
   }
 

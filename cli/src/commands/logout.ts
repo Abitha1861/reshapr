@@ -20,7 +20,7 @@ import { CLI_LABEL } from '../constants.js';
 
 export const logoutCommand = new Command('logout')
   .description(`Logout from ${CLI_LABEL}`)
-  .action(async (options) => {
+  .action(async () => {
     ConfigUtil.deleteConfig();
     Logger.success('You have been logged out successfully.');
   });

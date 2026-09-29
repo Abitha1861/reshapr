@@ -20,6 +20,7 @@ import { ConfigUtil } from "../utils/config.js";
 import { openUpdateEditor } from "../utils/editor.js";
 import { Context } from "../utils/context.js";
 import { CLI_LABEL } from '../constants.js';
+import type { ConfigurationPlan, HeaderPolicy, HeaderRename, HeaderRules } from '../types/models.js';
 
 export const configCommand = program.command('config')
   .description(`Manage configuration plans in ${CLI_LABEL}`);
@@ -29,7 +30,7 @@ configCommand.command('list')
   .description('List all configuration plans')
   .option('-s, --serviceId <id>', 'Filter by service ID')
   .option('-o, --output <format>', 'Output format (json, yaml)')
-  .action(async (options) => {
+  .action(async () => {
     
     const response = await fetch(`${ConfigUtil.config.server}/api/v1/configurationPlans`, {
       method: 'GET',
@@ -53,17 +54,17 @@ configCommand.command('list')
       } else {
         Context.put('configurationPlans', data);
         const longestName = longestCPName(data); // +1 for padding
-        const longestEndpoint = Math.max(...data.map((config: any) => config.backendEndpoint.length)) + 1; // +1 for padding
+        const longestEndpoint = Math.max(...data.map((config: {backendEndpoint: string}) => config.backendEndpoint.length)) + 1; // +1 for padding
 
         Logger.log(`${'ID'.padEnd(13, ' ')}  ${'NAME'.padEnd(longestName, ' ')} ${'SERVICE'.padEnd(14, ' ')} ${'BACKEND'.padEnd(longestEndpoint, ' ')} API_KEY  OAUTH2_CONFIG  AUDIT`);
-        data.forEach((config: any) => {
+        data.forEach((config: ConfigurationPlan) => {
           Logger.log(`${config.id}  ${config.name.padEnd(longestName, ' ')} ${config.serviceId.padEnd(14, ' ')} ${config.backendEndpoint.padEnd(longestEndpoint, ' ')} ${(config.apiKey != undefined ? 'Yes' : 'No').padEnd(8, ' ')} ${(config.oauth2Configuration != undefined ? 'Yes' : 'No').padEnd(14, ' ')} ${config.audit ? 'Yes' : 'No'}`);
         });
       }
     }
   });
 
-function longestCPName(expos: any[]) {
+function longestCPName(expos: ConfigurationPlan[]) {
   return expos.reduce((max, config) => {
     return Math.max(max, config.name.length + 1);
   }, 0);
@@ -86,7 +87,7 @@ configCommand.command('get <id>')
       process.exit(1);
     }
 
-    const config = await response.json();
+    const config: ConfigurationPlan = await response.json();
     Context.put('configurationPlan', config);
 
     Logger.info('Configuration plan details');
@@ -192,7 +193,7 @@ configCommand.command('create <name>')
       process.exit(1);
     }
 
-    const config = await response.json();
+    const config: ConfigurationPlan = await response.json();
     Logger.success(`Configuration plan '${config.name}' created successfully with ID: ${config.id}`);
     Context.put('configurationPlan', config);
 
@@ -279,7 +280,7 @@ configCommand.command('create-oauth <name>')
       process.exit(1);
     }
 
-    const config = await response.json();
+    const config: ConfigurationPlan = await response.json();
     Logger.success(`Configuration plan '${config.name}' created successfully with ID: ${config.id}`);
     Context.put('configurationPlan', config);
 
@@ -306,10 +307,10 @@ configCommand.command('update <id>')
         process.exit(1);
       }
 
-      const config = await response.json();
+      const config: ConfigurationPlan = await response.json();
       Logger.info(`Opening editor for configuration plan: ${config.name}`);
       
-      await openUpdateEditor(config, async (modifiedConfig: any) => {
+      await openUpdateEditor(config, async (modifiedConfig: ConfigurationPlan) => {
         // Enforce properties that are immutable.
         modifiedConfig.id = config.id; // Ensure the ID remains the same.
         modifiedConfig.organizationId = config.organizationId; // Ensure the organization ID remains the same.
@@ -353,7 +354,7 @@ configCommand.command('renew-api-key <id>')
       process.exit(1);
     }
 
-    const config = await response.json();
+    const config: ConfigurationPlan = await response.json();
     Logger.warn(`The API Key to access future expositions is: ${config.apiKey}`);
     Logger.warn('Make sure to store it securely, as it will not be shown again.');
     Context.put('configurationPlan', config);
@@ -410,7 +411,7 @@ configCommand.command('duplicate <id>')
       process.exit(1);
     }
 
-    const config = await response.json();
+    const config: ConfigurationPlan = await response.json();
     Logger.success(`Configuration plan '${config.name}' duplicated successfully with ID: ${config.id}`);
     Context.put('configurationPlan', config);
 
@@ -426,7 +427,7 @@ configCommand.command('duplicate <id>')
   });
 
 
-async function manageInclusionsAndExclusions(options: any) {
+async function manageInclusionsAndExclusions(options: {filter?: boolean; serviceId: string; includedOps?: string[]; excludedOps?: string[]}) {
   if (options.filter) {
     // We must retrieve the available operations to filter
     const opsResponse = await fetch(`${ConfigUtil.config.server}/api/v1/services/${options.serviceId}`, {
@@ -457,7 +458,7 @@ async function manageInclusionsAndExclusions(options: any) {
       options.includedOps = [];
       options.excludedOps = [];
     } else {
-      const opsChoices = service.operations.map((op: any) => ({
+      const opsChoices = service.operations.map((op: {name: string}) => ({
         name: op.name,
         value: op.name
       }));
@@ -485,32 +486,32 @@ async function manageInclusionsAndExclusions(options: any) {
     }
   } else {
     if (options.includedOperations) {
-      let operations: string[] = getArrayOfStrings(options.includedOperations, 'includedOperations');
+      const operations: string[] = getArrayOfStrings(options.includedOperations, 'includedOperations');
       options.includedOps = operations;
     }
     if (!options.includedOperations && options.excludedOperations) {
-      let operations: string[] = getArrayOfStrings(options.excludedOperations, 'excludedOperations');
+      const operations: string[] = getArrayOfStrings(options.excludedOperations, 'excludedOperations');
       options.excludedOps = operations;
     }
   }
 } 
 
-function getArrayOfStrings(input: any, name: string): string[] {
+function getArrayOfStrings(input: unknown, name: string): string[] {
   if (Array.isArray(input)) {
     return input;
-  } else {
+  }
+  if (typeof input === 'string') {
     try {
       const parsed = JSON.parse(input);
       if (Array.isArray(parsed)) {
         return parsed;
-      } else {
-        throw new Error('Not an array');
       }
-    } catch (err) {
-      Logger.error(`Input must be a JSON array of strings for ${name}.`);
-      process.exit(1);
+    } catch {
+      // Falls through to the error below.
     }
   }
+  Logger.error(`Input must be a JSON array of strings for ${name}.`);
+  process.exit(1);
   return [];
 }
 
@@ -521,13 +522,13 @@ function getArrayOfStrings(input: any, name: string): string[] {
  * a JSON object ({ allow, deny, rename }) mapped 1:1 to the API contract. `--passthrough` is
  * mutually exclusive with `--requestHeaderPolicy`. Returns undefined when no directive applies.
  */
-function buildHeaderPolicy(options: any): any | undefined {
+function buildHeaderPolicy(options: {passthrough?: boolean; requestHeaderPolicy?: unknown; responseHeaderPolicy?: unknown}): HeaderPolicy | undefined {
   if (options.passthrough && options.requestHeaderPolicy !== undefined) {
     Logger.error('The --passthrough flag is mutually exclusive with --requestHeaderPolicy. Use either the shortcut or the explicit request header policy.');
     process.exit(1);
   }
 
-  const policy: any = {};
+  const policy: HeaderPolicy = {};
   if (options.passthrough) {
     policy.request = { allow: ['Authorization'] };
   } else if (options.requestHeaderPolicy !== undefined) {
@@ -541,11 +542,11 @@ function buildHeaderPolicy(options: any): any | undefined {
 }
 
 /** Parse a JSON object into a set of allow/deny/rename directives for a single direction. */
-function parseHeaderRules(input: any, name: string): any {
-  let parsed: any;
+function parseHeaderRules(input: unknown, name: string): HeaderRules {
+  let parsed: unknown;
   try {
     parsed = typeof input === 'string' ? JSON.parse(input) : input;
-  } catch (err) {
+  } catch {
     Logger.error(`Input for --${name} must be a JSON object with optional allow, deny and rename fields.`);
     process.exit(1);
   }
@@ -553,15 +554,16 @@ function parseHeaderRules(input: any, name: string): any {
     Logger.error(`Input for --${name} must be a JSON object with optional allow, deny and rename fields.`);
     process.exit(1);
   }
-  const rules: any = {};
-  if (parsed.allow !== undefined) {
-    rules.allow = getArrayOfStrings(parsed.allow, `${name}.allow`);
+  const parsedRules = parsed as { allow?: unknown; deny?: unknown; rename?: unknown };
+  const rules: HeaderRules = {};
+  if (parsedRules.allow !== undefined) {
+    rules.allow = getArrayOfStrings(parsedRules.allow, `${name}.allow`);
   }
-  if (parsed.deny !== undefined) {
-    rules.deny = getArrayOfStrings(parsed.deny, `${name}.deny`);
+  if (parsedRules.deny !== undefined) {
+    rules.deny = getArrayOfStrings(parsedRules.deny, `${name}.deny`);
   }
-  if (parsed.rename !== undefined) {
-    rules.rename = parseHeaderRenames(parsed.rename, name);
+  if (parsedRules.rename !== undefined) {
+    rules.rename = parseHeaderRenames(parsedRules.rename, name);
   }
   return rules;
 }
@@ -570,12 +572,12 @@ function parseHeaderRules(input: any, name: string): any {
  * Parse rename directives accepting either 'From-Header:To-Header' strings or
  * { from, to } objects, normalizing them to { from, to }.
  */
-function parseHeaderRenames(input: any, name: string): { from: string; to: string }[] {
+function parseHeaderRenames(input: unknown, name: string): HeaderRename[] {
   if (!Array.isArray(input)) {
     Logger.error(`The rename field of --${name} must be a JSON array.`);
     process.exit(1);
   }
-  return input.map((entry: any) => {
+  return input.map((entry: unknown) => {
     if (typeof entry === 'string') {
       const idx = entry.indexOf(':');
       if (idx <= 0 || idx === entry.length - 1) {
@@ -584,8 +586,8 @@ function parseHeaderRenames(input: any, name: string): { from: string; to: strin
       }
       return { from: entry.slice(0, idx).trim(), to: entry.slice(idx + 1).trim() };
     }
-    if (entry && typeof entry === 'object' && typeof entry.from === 'string' && typeof entry.to === 'string') {
-      return { from: entry.from, to: entry.to };
+    if (entry && typeof entry === 'object' && typeof (entry as HeaderRename).from === 'string' && typeof (entry as HeaderRename).to === 'string') {
+      return { from: (entry as HeaderRename).from, to: (entry as HeaderRename).to };
     }
     Logger.error(`Invalid header rename rule '${JSON.stringify(entry)}'. Expected 'From-Header:To-Header' or { "from": ..., "to": ... }.`);
     process.exit(1);
@@ -595,7 +597,7 @@ function parseHeaderRenames(input: any, name: string): { from: string; to: strin
 
 /** Print the header propagation policy of a configuration plan, when present. */
 /** Print the caching configuration of a plan, when present. */
-function printCachePolicy(config: any) {
+function printCachePolicy(config: ConfigurationPlan) {
   const policy = config.cachePolicy;
   if (!policy || (policy.ttlMs == undefined && !policy.cacheScope)) {
     return;
@@ -609,7 +611,7 @@ function printCachePolicy(config: any) {
   }
 }
 
-function printHeaderPolicy(config: any) {
+function printHeaderPolicy(config: ConfigurationPlan) {
   const policy = config.headerPolicy;
   if (!policy) {
     return;
@@ -619,7 +621,7 @@ function printHeaderPolicy(config: any) {
 }
 
 /** Print a single direction of allow/deny/rename directives, when present. */
-function printHeaderRules(title: string, rules: any) {
+function printHeaderRules(title: string, rules: HeaderRules | undefined) {
   if (!rules || (!rules.allow?.length && !rules.deny?.length && !rules.rename?.length)) {
     return;
   }
@@ -631,6 +633,6 @@ function printHeaderRules(title: string, rules: any) {
     Logger.log(`  Deny            : ${rules.deny.join(', ')}`);
   }
   if (rules.rename && rules.rename.length > 0) {
-    Logger.log(`  Rename          : ${rules.rename.map((r: any) => `${r.from} -> ${r.to}`).join(', ')}`);
+    Logger.log(`  Rename          : ${rules.rename.map((r: { from: string; to: string }) => `${r.from} -> ${r.to}`).join(', ')}`);
   }
 }

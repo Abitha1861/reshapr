@@ -26,7 +26,7 @@ export const gatewayGroupCommand = program.command('gateway-group')
 gatewayGroupCommand.command('list')
   .description('List all gateway groups')
   .option('-o, --output <format>', 'Output format (json, yaml)')
-  .action(async (options) => {
+  .action(async () => {
     const response = await fetch(`${ConfigUtil.config.server}/api/v1/gatewayGroups`, {
       method: 'GET',
       headers: {
@@ -48,18 +48,18 @@ gatewayGroupCommand.command('list')
       const longestGroupOrganization = longestGroupOrganizationName(data) + 1; // +1 for padding
 
       Logger.log(`${'ID'.padEnd(13, ' ')}  ${'ORG'.padEnd(longestGroupOrganization, ' ')} ${'NAME'.padEnd(longestName, ' ')} ${'LABELS'.padEnd(60, ' ')}`);
-      data.forEach((group: any) => {
+      data.forEach((group: {id: string; organizationId: string; name: string; labels: Record<string, string>}) => {
         Logger.log(`${group.id.padEnd(13, ' ')}  ${group.organizationId.padEnd(longestGroupOrganization, ' ')} ${group.name.padEnd(longestName, ' ')} ${JSON.stringify(group.labels).padEnd(60, ' ')}`);
       });
     }
   });
 
-function longestGroupName(groups: any[]) {
+function longestGroupName(groups: {name: string}[]) {
   return groups.reduce((max, group) => {
     return Math.max(max, group.name.length);
   }, 0);
 }
-function longestGroupOrganizationName(groups: any[]) {
+function longestGroupOrganizationName(groups: {organizationId?: string}[]) {
   return groups.reduce((max, group) => {
     return Math.max(max, group.organizationId ? group.organizationId.length : 0);
   }, 0);
@@ -71,7 +71,7 @@ gatewayGroupCommand.command('create <name>')
   .option('-l, --labels <labels>', 'JSON map of key-values labels for the gateway group')
   .option('-o, --output <format>', 'Output format (json, yaml)')
   .action(async (name, options) => {
-    let labels: Record<string, string> = options.labels ? JSON.parse(options.labels) : {};
+    const labels: Record<string, string> = options.labels ? JSON.parse(options.labels) : {};
 
     const response = await fetch(`${ConfigUtil.config.server}/api/v1/gatewayGroups`, {
       method: 'POST',

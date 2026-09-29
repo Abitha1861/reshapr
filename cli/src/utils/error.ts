@@ -22,7 +22,7 @@
  * to the HTTP status text so the caller always gets the most specific detail available.
  */
 export async function readHttpErrorMessage(response: Response): Promise<string> {
-  let text = '';
+  let text;
   try {
     text = await response.text();
   } catch {

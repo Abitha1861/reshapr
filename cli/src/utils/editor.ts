@@ -22,7 +22,7 @@ import { Logger } from "../utils/logger.js";
 import { CLI_NAME } from '../constants.js';
 
 /** Open a text editor to change initialContent. Execute onChanged() if updated. */
-export async function openUpdateEditor(initialContent: any, onChanged: (modifiedContent: any) => Promise<void>): Promise<void> {
+export async function openUpdateEditor<T>(initialContent: T, onChanged: (modifiedContent: T) => Promise<void>): Promise<void> {
 
   // Create a temporary file with the current configuration
   const tempDir = os.tmpdir();

@@ -60,7 +60,7 @@ export class ConfigUtil {
   static readConfig(): void {
     if (fs.existsSync(ConfigUtil.configPath)) {
       try {
-        let configData = fs.readFileSync(ConfigUtil.configPath, 'utf-8');
+        const configData = fs.readFileSync(ConfigUtil.configPath, 'utf-8');
         ConfigUtil.config = JSON.parse(configData) as Config;
       } catch (err) {
         Logger.error('Failed to read config file: ' + err);

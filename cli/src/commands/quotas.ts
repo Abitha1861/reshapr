@@ -47,19 +47,19 @@ export const quotasCommand = new Command('quotas')
       const longestOrganization = longestQuotaOrganization(data) + 1;
 
       Logger.log(`${'ORG'.padEnd(longestOrganization, ' ')} ${'METRIC'.padEnd(longestMetric, ' ')} ${'ENABLED'.padEnd(8, ' ')} ${'LIMIT'.padEnd(6, ' ')} ${'REMAINING'.padEnd(10, ' ')}`);
-      data.forEach((quota: any) => {
+      data.forEach((quota: {organizationId: string; metric: string; enabled: boolean; limit: number; remaining: number}) => {
         Logger.log(`${quota.organizationId.padEnd(longestOrganization, ' ')} ${quota.metric.padEnd(longestMetric, ' ')} ${(quota.enabled ? 'Y': 'N').padEnd(8, ' ')} ${quota.limit.toString().padEnd(6, ' ')} ${quota.remaining.toString().padEnd(10, ' ')}`);
       });
     }
   });
 
-const longestQuotaMetric = (quotas: any[]) => {
+const longestQuotaMetric = (quotas: {metric: string}[]) => {
   return quotas.reduce((max, quota) => {
     return Math.max(max, quota.metric.length);
   }, 0);
 }
 
-const longestQuotaOrganization = (quotas: any[]) => {
+const longestQuotaOrganization = (quotas: {organizationId: string}[]) => {
   return quotas.reduce((max, quota) => {
     return Math.max(max, quota.organizationId.length);
   }, 0);
