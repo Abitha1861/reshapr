@@ -206,6 +206,7 @@
           <source>25</source>
           <target>25</target>
           <compilerArgs>--enable-preview</compilerArgs>
+          <compilerArgs>-Xlint</compilerArgs>
           <parameters>true</parameters>
           <annotationProcessorPaths>
             <path>
