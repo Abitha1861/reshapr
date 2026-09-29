@@ -43,15 +43,17 @@
 		DropdownMenuTrigger
 	} from '$lib/components/ui/dropdown-menu/index.js';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import MoreVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import UserLockIcon from '@lucide/svelte/icons/user-lock';
-	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
-	import MessageSquareLockIcon from '@lucide/svelte/icons/message-square-lock';
-	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { RefreshIcon } from '@hugeicons/core-free-icons';
+	import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/svelte';
+	import {
+		RefreshIcon,
+		Search01Icon,
+		MoreVerticalIcon,
+		PencilEdit02Icon,
+		Delete02Icon,
+		UserLockIcon,
+		Key01Icon,
+		MessageLockIcon
+	} from '@hugeicons/core-free-icons';
 	import { cn } from '$lib/utils.js';
 
 	type SecretRefRow = {
@@ -103,7 +105,7 @@
 		return 'unknown';
 	}
 
-	const CRED_META: Record<CredKind, { label: string; classes: string; icon: any }> = {
+	const CRED_META: Record<CredKind, { label: string; classes: string; icon: IconSvgElement }> = {
 		basic: {
 			label: 'User / password',
 			icon: UserLockIcon,
@@ -111,22 +113,22 @@
 		},
 		token: {
 			label: 'Token',
-			icon: KeyRoundIcon,
+			icon: Key01Icon,
 			classes: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400'
 		},
 		clientCredentials: {
 			label: 'OAuth2 client credentials',
-			icon: KeyRoundIcon,
+			icon: Key01Icon,
 			classes: 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400'
 		},
 		elicitation: {
 			label: 'Elicitation',
-			icon: MessageSquareLockIcon,
+			icon: MessageLockIcon,
 			classes: 'bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400'
 		},
 		unknown: {
 			label: 'Other',
-			icon: KeyRoundIcon,
+			icon: Key01Icon,
 			classes: 'bg-muted text-muted-foreground ring-border'
 		}
 	};
@@ -427,7 +429,8 @@
 	</div>
 	{#if !loading && rows.length > 0}
 		<div class="relative w-full sm:w-64">
-			<SearchIcon
+			<HugeiconsIcon
+				icon={Search01Icon}
 				class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
 			/>
 			<Input bind:value={query} placeholder="Filter by name…" class="pl-8" />
@@ -477,14 +480,13 @@
 						<Table.Cell>
 							{@const kind = credentialKind(row)}
 							{@const meta = CRED_META[kind]}
-							{@const Icon = meta.icon}
 							<span
 								class={cn(
 									'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
 									meta.classes
 								)}
 							>
-								<Icon class="size-3.5" />
+								<HugeiconsIcon icon={meta.icon} class="size-3.5" />
 								{meta.label}
 							</span>
 						</Table.Cell>
@@ -499,20 +501,20 @@
 								<DropdownMenuTrigger>
 									{#snippet child({ props })}
 										<Button variant="ghost" size="icon" {...props}>
-											<MoreVerticalIcon class="size-4" />
+											<HugeiconsIcon icon={MoreVerticalIcon} class="size-4" />
 										</Button>
 									{/snippet}
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
 									<DropdownMenuItem class="px-4" onclick={() => void openEdit(row)}>
-										<PencilIcon class="size-4" />
+										<HugeiconsIcon icon={PencilEdit02Icon} class="size-4" />
 										Edit
 									</DropdownMenuItem>
 									<DropdownMenuItem
 										class="text-destructive px-4"
 										onclick={() => void onDelete(row)}
 									>
-										<Trash2Icon class="size-4" />
+										<HugeiconsIcon icon={Delete02Icon} class="size-4" />
 										Delete
 									</DropdownMenuItem>
 								</DropdownMenuContent>

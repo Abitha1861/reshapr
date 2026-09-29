@@ -26,6 +26,7 @@
   import { QuickStartWizard } from '$lib/components/artifacts/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import { HugeiconsIcon } from '@hugeicons/svelte';
+  import type { IconSvgElement } from '@hugeicons/svelte';
   import {
     AiMagicIcon,
     ApiIcon,
@@ -74,7 +75,7 @@
   interface NavItem {
     href: string;
     label: string;
-    icon: any;
+    icon: IconSvgElement;
     adminOnly?: boolean;
     /** When set, the entry acts as a button triggering this action instead of navigating. */
     action?: () => void;

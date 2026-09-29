@@ -603,7 +603,7 @@
 												id="qs-oauth-servers"
 												bind:value={oauthAuthServersText}
 												rows={2}
-												placeholder={'https://auth.example.com/realms/main'}
+												placeholder="https://auth.example.com/realms/main"
 											/>
 											<p class="text-muted-foreground text-xs">One issuer URL per line.</p>
 										</div>
@@ -622,7 +622,7 @@
 												id="qs-oauth-scopes"
 												bind:value={oauthScopesText}
 												rows={2}
-												placeholder={'openid\nmcp:invoke'}
+												placeholder="openid\nmcp:invoke"
 											/>
 											<p class="text-muted-foreground text-xs">One scope per line.</p>
 										</div>
@@ -644,7 +644,7 @@
 													id="qs-oauth-static-aud"
 													bind:value={oauthStaticAudiencesText}
 													rows={2}
-													placeholder={'https://api.example.com'}
+													placeholder="https://api.example.com"
 												/>
 												<p class="text-muted-foreground text-xs">One audience per line.</p>
 											</div>

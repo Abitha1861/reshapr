@@ -199,7 +199,7 @@
 
 {#if ctx.loading}
 	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-		{#each Array(6) as _, i (i)}
+		{#each Array(6), i (i)}
 			<div class="bg-muted/40 h-28 animate-pulse rounded-xl border"></div>
 		{/each}
 	</div>
@@ -261,7 +261,7 @@
 		<div class="mt-10">
 			<div class="bg-muted/60 mb-4 h-5 w-40 animate-pulse rounded"></div>
 			<div class="grid gap-4 sm:grid-cols-2">
-				{#each Array(2) as _, i (i)}
+				{#each Array(2), i (i)}
 					<div class="bg-muted/40 h-28 animate-pulse rounded-xl border"></div>
 				{/each}
 			</div>

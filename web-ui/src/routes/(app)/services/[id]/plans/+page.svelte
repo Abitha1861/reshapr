@@ -259,7 +259,7 @@
 		duplicateBusy = true;
 		duplicateError = null;
 		try {
-			const res = await apiClient().duplicateConfigurationPlan(row.id, duplicateNewName.trim()) as any;
+			const res = await apiClient().duplicateConfigurationPlan(row.id, duplicateNewName.trim()) as { apiKey?: string; initialAccessToken?: string };
 			await load();
 			
 			if (res.apiKey || res.initialAccessToken) {

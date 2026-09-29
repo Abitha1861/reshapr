@@ -27,6 +27,7 @@
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { FileUploadIcon, Link01Icon } from '@hugeicons/core-free-icons';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 
 	/**
 	 * Embeddable import/attach form (no dialog, no action button). It exposes an
@@ -38,6 +39,7 @@
 	let {
 		mode,
 		onDone,
+		// eslint-disable-next-line no-useless-assignment -- read externally via bind:submitting
 		submitting = $bindable(false)
 	}: {
 		mode: ImportArtifactMode;
@@ -98,7 +100,7 @@
 					return null;
 				}
 				if (mode === 'import') {
-					const p = new URLSearchParams();
+					const p = new SvelteURLSearchParams();
 					p.set('url', u);
 					p.set('mainArtifact', 'true');
 					if (secretName.trim()) p.set('secretName', secretName.trim());

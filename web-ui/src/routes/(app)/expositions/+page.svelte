@@ -198,7 +198,7 @@
 	}
 
 	$effect(() => {
-		mode;
+		void mode;
 		void load();
 	});
 

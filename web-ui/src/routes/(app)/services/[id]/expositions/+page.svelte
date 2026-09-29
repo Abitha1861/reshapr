@@ -16,6 +16,7 @@
 
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { apiClient, ApiError } from '$lib/api/client.js';
 	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
@@ -145,7 +146,7 @@
 			// The active exposition payload doesn't carry configurationPlan.name /
 			// gatewayGroup.name, so index the full ("all") list by id and use it as the
 			// source of truth for those details, cross-referencing by exposition id.
-			const detailsById = new Map<string, unknown>();
+			const detailsById = new SvelteMap<string, unknown>();
 			for (const e of allForService) {
 				const id = expositionId(e);
 				if (id) detailsById.set(id, e);
@@ -169,7 +170,7 @@
 	}
 
 	$effect(() => {
-		mode;
+		void mode;
 		if (ctx.id && !ctx.loading) void load();
 	});
 

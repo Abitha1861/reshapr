@@ -16,7 +16,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Badge } from '$lib/components/ui/badge/index.js';
+  import { SvelteSet } from 'svelte/reactivity';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
@@ -148,7 +148,7 @@
 
   // ── Assign organizations step state ───────────────────────
   let createdUsername = $state('');
-  let selectedOrgs = $state<Set<string>>(new Set());
+  let selectedOrgs = new SvelteSet<string>();
   let orgFilterQuery = $state('');
   let assignSubmitting = $state(false);
   let assignFormError = $state('');
@@ -161,13 +161,11 @@
   );
 
   function toggleOrg(orgName: string) {
-    const next = new Set(selectedOrgs);
-    if (next.has(orgName)) {
-      next.delete(orgName);
+    if (selectedOrgs.has(orgName)) {
+      selectedOrgs.delete(orgName);
     } else {
-      next.add(orgName);
+      selectedOrgs.add(orgName);
     }
-    selectedOrgs = next;
   }
 
   function resetUserForm() {
@@ -176,7 +174,7 @@
     userFormError = ''; userFormSuccess = '';
     drawerStep = 'create';
     createdUsername = '';
-    selectedOrgs = new Set();
+    selectedOrgs.clear();
     orgFilterQuery = '';
     assignFormError = ''; assignFormSuccess = '';
   }

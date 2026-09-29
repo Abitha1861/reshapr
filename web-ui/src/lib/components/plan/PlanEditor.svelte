@@ -30,7 +30,6 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { parseArtifactRefList, type ArtifactRef, type ArtifactType } from '$lib/artifacts/index.js';
-	import { parseServiceRecord } from '$lib/serviceHub.js';
 	import { parseOperationsList, formatOperationsList } from '$lib/operationsList.js';
 	import { cn } from '$lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
@@ -69,8 +68,6 @@
 	let operations = $state<ServiceOperation[]>([]);
 	let artifacts = $state<ArtifactRef[]>([]);
 	let secrets = $state<SecretOption[]>([]);
-	let serviceName = $state('');
-	let serviceVersion = $state('');
 	/** The full plan document loaded in edit mode; preserved on save to keep unknown fields. */
 	let basePlan = $state<Record<string, unknown>>({});
 
@@ -311,9 +308,6 @@
 			]);
 
 			operations = parseOperations(service);
-			const record = parseServiceRecord(service);
-			serviceName = record?.name && record.name !== '—' ? record.name : '';
-			serviceVersion = record?.version && record.version !== '—' ? record.version : '';
 			artifacts = parseArtifactRefList(refs);
 			secrets = (Array.isArray(secretRefs) ? secretRefs : [])
 				.map((s): SecretOption | null => {
@@ -1139,7 +1133,7 @@
 						bind:value={oauthAuthServersText}
 						rows={3}
 						disabled={loading}
-						placeholder={'https://auth.example.com/realms/main'}
+						placeholder="https://auth.example.com/realms/main"
 					/>
 					<p class="text-muted-foreground text-xs">One issuer URL per line.</p>
 				</div>
@@ -1160,7 +1154,7 @@
 						bind:value={oauthScopesText}
 						rows={3}
 						disabled={loading}
-						placeholder={'openid\nprofile\nmcp:invoke'}
+						placeholder="openid\nprofile\nmcp:invoke"
 					/>
 					<p class="text-muted-foreground text-xs">One scope per line.</p>
 				</div>
@@ -1183,7 +1177,7 @@
 							bind:value={oauthStaticAudiencesText}
 							rows={3}
 							disabled={loading}
-							placeholder={'https://api.example.com'}
+							placeholder="https://api.example.com"
 						/>
 						<p class="text-muted-foreground text-xs">One audience per line.</p>
 					</div>
@@ -1245,7 +1239,7 @@
 <ConfirmDialog
 	bind:open={deleteOpen}
 	title="Delete configuration plan"
-	description={`You are about to delete this configuration plan. This action cannot be undone.`}
+	description="You are about to delete this configuration plan. This action cannot be undone."
 	confirmLabel="Delete"
 	onConfirm={confirmDeletePlan}
 >

@@ -66,8 +66,8 @@
       } else {
         members = await res.json();
       }
-    } catch (e: any) {
-      errorMsg = e.message || 'Failed to fetch members.';
+    } catch (e: unknown) {
+      errorMsg = (e instanceof Error && e.message) || 'Failed to fetch members.';
     } finally {
       isLoading = false;
     }
@@ -95,8 +95,8 @@
       inviteSuccess = 'User successfully added to organization.';
       inviteEmail = '';
       await fetchMembers();
-    } catch (e: any) {
-      inviteError = e.message || 'Failed to add member.';
+    } catch (e: unknown) {
+      inviteError = (e instanceof Error && e.message) || 'Failed to add member.';
     } finally {
       isInviting = false;
     }

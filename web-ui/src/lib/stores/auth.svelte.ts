@@ -15,6 +15,7 @@
  */
 
 import type { User, AuthMode, UserProfile } from '$lib/types.js';
+import { SvelteSet } from 'svelte/reactivity';
 
 /**
  * Reactive authentication store using Svelte 5 runes.
@@ -108,7 +109,7 @@ function createAuthStore() {
           // Deduplicate organizations by name (backend may return duplicates
           // if user is both owner and member of an org).
           if (data.organizations) {
-            const seen = new Set<string>();
+            const seen = new SvelteSet<string>();
             data.organizations = data.organizations.filter((org: { name: string }) => {
               if (seen.has(org.name)) return false;
               seen.add(org.name);

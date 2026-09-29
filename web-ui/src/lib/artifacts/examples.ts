@@ -220,7 +220,7 @@ const PROMPTS_EXAMPLES: ArtifactExample[] = [
 		id: 'parameterized-prompt',
 		label: 'Parameterized prompt',
 		description:
-			'Declare arguments and inject them into the result with the \${argument} notation; the client fills them before sending.',
+			'Declare arguments and inject them into the result with the ${argument} notation; the client fills them before sending.',
 		entryKey: 'summarize_topic',
 		entry: `  # Parameterized prompt — declare arguments and inject them into the result with the
   # \${argument} notation. The client fills the arguments before sending the prompt.

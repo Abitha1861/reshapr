@@ -57,7 +57,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
   });
 };
 
-function formatExpiresAt(payload: Record<string, any> | null) : string | undefined {
+function formatExpiresAt(payload: Record<string, unknown> | null) : string | undefined {
   if (payload && typeof payload.exp === 'number' && Number.isFinite(payload.exp)) {
     return new Date(payload.exp * 1000).toISOString();
   }
