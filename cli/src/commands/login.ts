@@ -115,6 +115,14 @@ export const loginCommand = new Command('login')
       });
       options.password = password.password;
     }
+    // Captured as a local const + guard so the narrowed (non-undefined) type survives into the closure
+    // below (narrowing of a reassigned object property does not survive past the `if` block above).
+    const username = options.username;
+    if (!username) {
+      Logger.error('Username is required.');
+      process.exit(1);
+    }
+
     // Here you call a login function to authenticate the user.
     Logger.info(`Logging in to ${CLI_LABEL} at ${options.server}...`);
     const response = await fetch(`${options.server}/auth/login/reshapr`, {
@@ -123,7 +131,7 @@ export const loginCommand = new Command('login')
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        username: options.username,
+        username,
         password: options.password
       })
     });
@@ -134,10 +142,10 @@ export const loginCommand = new Command('login')
     }
     response.text().then(data => {
       Logger.success('Login successful!');
-      Logger.info(`Welcome, ${options.username}!`);
+      Logger.info(`Welcome, ${username}!`);
       // Here you would typically save the authentication token or session.
       const config = {
-        username: options.username,
+        username,
         server: options.server,
         insecure: options.insecure,
         token: data // Assuming the response contains a token.

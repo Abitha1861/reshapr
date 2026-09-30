@@ -60,7 +60,7 @@ export const importCommand = new Command('import')
       body = new FormData();
       body.append('file', new Blob([fs.readFileSync(options.file)]), options.file.split('/').pop());
       body.append('mainArtifact', 'true');
-    } else if (options.url) {
+    } else {
       // We should encode in application/x-www-form-urlencoded
       body = new URLSearchParams();
       body.append('url', options.url);
@@ -311,21 +311,21 @@ function uniqueFQDNs(gateways: GatewayEndpoint[]): string[] {
   return allFqdns;
 }
 
-function getArrayOfStrings(input: object, name: string): string[] {
+function getArrayOfStrings(input: unknown, name: string): string[] {
   if (Array.isArray(input)) {
     return input;
-  } else {
+  }
+  if (typeof input === 'string') {
     try {
       const parsed = JSON.parse(input);
       if (Array.isArray(parsed)) {
         return parsed;
-      } else {
-        throw new Error('Not an array');
       }
     } catch {
-      Logger.error(`Input must be a JSON array of strings for ${name}.`);
-      process.exit(1);
+      // Falls through to the error below.
     }
   }
+  Logger.error(`Input must be a JSON array of strings for ${name}.`);
+  process.exit(1);
   return [];
 }

@@ -427,7 +427,7 @@ configCommand.command('duplicate <id>')
   });
 
 
-async function manageInclusionsAndExclusions(options: {filter?: boolean; serviceId: string; includedOps?: string[]; excludedOps?: string[]}) {
+async function manageInclusionsAndExclusions(options: {filter?: boolean; serviceId: string; includedOps?: string[]; excludedOps?: string[]; includedOperations?: unknown; excludedOperations?: unknown}) {
   if (options.filter) {
     // We must retrieve the available operations to filter
     const opsResponse = await fetch(`${ConfigUtil.config.server}/api/v1/services/${options.serviceId}`, {

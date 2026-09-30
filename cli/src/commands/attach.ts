@@ -35,7 +35,7 @@ export const attachCommand = new Command('attach')
       process.exit(1);
     }
 
-    let body: unknown;
+    let body: FormData | URLSearchParams;
 
     if (options.file) {
       if (!fs.existsSync(options.file)) {
@@ -45,7 +45,7 @@ export const attachCommand = new Command('attach')
       // We should encode in multipart/form-data
       body = new FormData();
       body.append('file', new Blob([fs.readFileSync(options.file)]), options.file.split('/').pop());
-    } else if (options.url) {
+    } else {
       // We should encode in application/x-www-form-urlencoded
       body = new URLSearchParams();
       body.append('url', options.url);
