@@ -18,7 +18,7 @@ on:
       - '*.md'
 
 jobs:
-  build-install:
+  main-install:
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -60,7 +60,7 @@ jobs:
       image-tag: ${{ steps.set-environment.outputs.IMAGE_TAG }}
       package-image: ${{ steps.set-environment.outputs.PACKAGE_IMAGE }}
 
-  cli-lint:
+  cli-lint-test:
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -97,7 +97,14 @@ jobs:
         working-directory: cli
         run: npm run lint
 
-  web-ui-lint:
+      - name: Build and test CLI
+        if: steps.filter.outputs.cli == 'true'
+        working-directory: cli
+        run: |
+          npm run build
+          npm run test
+
+  web-ui-lint-test:
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -133,6 +140,13 @@ jobs:
         if: steps.filter.outputs.webui == 'true'
         working-directory: web-ui
         run: npm run lint
+
+      - name: Build and test web-ui
+        if: steps.filter.outputs.webui == 'true'
+        working-directory: web-ui
+        run: |
+          npm run check
+          npm run build
 
   container-images-build:
     needs:
