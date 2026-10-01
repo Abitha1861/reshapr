@@ -20,6 +20,16 @@ updates:
     cooldown:
       default-days: 7
 
+  - package-ecosystem: npm
+    directory: /web-ui
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 3
+    rebase-strategy: disabled
+    cooldown:
+      default-days: 7
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
