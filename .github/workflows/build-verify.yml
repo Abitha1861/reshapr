@@ -153,7 +153,7 @@ jobs:
       - main-install
       - cli-lint-test
       - web-ui-lint-test
-    if: github.repository_owner == 'reshaprio' && needs.build-install.outputs.package-image == 'true' && github.event_name != 'pull_request'
+    if: github.repository_owner == 'reshaprio' && needs.main-install.outputs.package-image == 'true' && github.event_name != 'pull_request'
     permissions:
       contents: read
       packages: write
