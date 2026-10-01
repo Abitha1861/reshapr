@@ -112,6 +112,10 @@ The current development version is `1.0.1-SNAPSHOT`.
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=reshaprio_reshapr&metric=security_rating)](https://sonarcloud.io/summary/overall?id=reshaprio_reshapr&branch=main)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=reshaprio_reshapr&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=reshaprio_reshapr&branch=main)
 
+#### LFX Insights
+
+[![LFX Health Score](https://insights.linuxfoundation.org/api/badge/health-score?project=reshaprio-reshapr)](https://insights.linuxfoundation.org/project/reshaprio-reshapr) [![LFX Contributors](https://insights.linuxfoundation.org/api/badge/contributors?project=reshaprio-reshapr)](https://insights.linuxfoundation.org/project/reshaprio-reshapr) [![LFX Active Contributors](https://insights.linuxfoundation.org/api/badge/active-contributors?project=reshaprio-reshapr)](https://insights.linuxfoundation.org/project/reshaprio-reshapr)
+
 #### OpenSSF best practices
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15110/badge)](https://www.bestpractices.dev/en/projects/15110)
