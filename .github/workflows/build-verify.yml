@@ -160,6 +160,6 @@ jobs:
       id-token: write # needed for signing the images with GitHub OIDC Token
     uses: ./.github/workflows/build-containers.yml
     with:
-      image-tag: ${{ needs.build-install.outputs.image-tag }}
+      image-tag: ${{ needs.main-install.outputs.image-tag }}
     secrets: inherit
 
