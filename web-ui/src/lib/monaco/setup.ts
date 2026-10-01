@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import EditorWorker from 'monaco-editor/editor/editor.worker.js?worker';
 import YamlWorker from './yaml.worker.js?worker';
 import { buildMonacoYamlSchemas } from './schemas.js';
 
@@ -88,7 +88,6 @@ export async function ensureMonacoYaml(): Promise<typeof Monaco> {
 
 	monacoPromise = (async () => {
 		configureWorkers();
-		await import('monaco-editor/min/vs/editor/editor.main.css');
 		const monaco = await import('monaco-editor');
 		patchMonacoWebWorker(monaco);
 		const { configureMonacoYaml } = await import('monaco-yaml');

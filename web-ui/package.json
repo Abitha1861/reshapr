@@ -22,7 +22,7 @@
     "@sveltejs/kit": "2.70.2",
     "bits-ui": "2.18.1",
     "clsx": "2.1.1",
-    "monaco-editor": "0.55.1",
+    "monaco-editor": "0.57.0",
     "monaco-yaml": "5.5.1",
     "svelte": "5.55.9",
     "tailwind-merge": "3.6.0",
