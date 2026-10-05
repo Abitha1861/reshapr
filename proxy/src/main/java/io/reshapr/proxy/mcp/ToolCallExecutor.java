@@ -17,6 +17,7 @@ package io.reshapr.proxy.mcp;
 
 import io.reshapr.proxy.context.MethodHandlingContext;
 import io.reshapr.proxy.context.SessionInfo;
+import io.reshapr.proxy.mcp.code.CodeModeLimits;
 import io.reshapr.proxy.mcp.converters.CustomToolResolutionException;
 import io.reshapr.proxy.mcp.converters.GraphQLMcpToolConverter;
 import io.reshapr.proxy.mcp.converters.GrpcMcpToolConverter;
@@ -88,6 +89,21 @@ public class ToolCallExecutor {
    @ConfigProperty(name = "reshapr.gateway.scripting.max-depth", defaultValue = "5")
    int scriptMaxDepth;
 
+   @ConfigProperty(name = "reshapr.gateway.scripting.max-memory-pages", defaultValue = "256")
+   int scriptMaxMemoryPages;
+
+   @ConfigProperty(name = "reshapr.gateway.code-mode.timeout", defaultValue = "10000")
+   long codeModeTimeoutMillis;
+
+   @ConfigProperty(name = "reshapr.gateway.code-mode.max-tool-calls", defaultValue = "10")
+   int codeModeMaxToolCalls;
+
+   @ConfigProperty(name = "reshapr.gateway.code-mode.max-code-size", defaultValue = "4000")
+   int codeModeMaxCodeSize;
+
+   @ConfigProperty(name = "reshapr.gateway.code-mode.max-result-size", defaultValue = "100000")
+   int codeModeMaxResultSize;
+
    /** The maximum custom-tool script execution time in milliseconds ({@code <= 0} disables it). */
    public long scriptTimeoutMillis() {
       return scriptTimeoutMillis;
@@ -101,6 +117,17 @@ public class ToolCallExecutor {
    /** The maximum custom-tool script nesting depth (anti cross-script recursion). */
    public int scriptMaxDepth() {
       return scriptMaxDepth;
+   }
+
+   /** The maximum number of 64 KiB WebAssembly pages a script sandbox may grow to ({@code <= 0} disables the cap). */
+   public int scriptMaxMemoryPages() {
+      return scriptMaxMemoryPages;
+   }
+
+   /** The guard-rails applied to MCP Code Mode snippets, which are authored by the model. */
+   public CodeModeLimits codeModeLimits() {
+      return new CodeModeLimits(codeModeTimeoutMillis, codeModeMaxToolCalls, scriptMaxDepth,
+            scriptMaxMemoryPages, codeModeMaxCodeSize, codeModeMaxResultSize);
    }
 
    /**

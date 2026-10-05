@@ -24,6 +24,8 @@ import io.roastedroot.quickjs4j.core.Engine;
 import io.roastedroot.quickjs4j.core.Runner;
 import jakarta.annotation.Nullable;
 import org.jboss.logging.Logger;
+import run.endive.runtime.ByteArrayMemory;
+import run.endive.wasm.types.MemoryLimits;
 
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -83,6 +85,8 @@ public class CustomToolScriptRunner {
 
    private final ObjectMapper mapper;
    private final long timeoutMillis;
+   private final String extraPrelude;
+   private final int maxMemoryPages;
 
    /**
     * Build a CustomToolScriptRunner without an execution timeout.
@@ -98,9 +102,25 @@ public class CustomToolScriptRunner {
     * @param timeoutMillis The maximum script execution time in milliseconds; {@code <= 0} disables the timeout.
     */
    public CustomToolScriptRunner(ObjectMapper mapper, long timeoutMillis) {
-      this.mapper = mapper;
-      this.timeoutMillis = timeoutMillis;
+      this(mapper, timeoutMillis, null, 0);
    }
+
+   /**
+    * Build a fully configured CustomToolScriptRunner.
+    * @param mapper The object mapper used to serialize the script input arguments.
+    * @param timeoutMillis The maximum script execution time in milliseconds; {@code <= 0} disables the timeout.
+    * @param extraPrelude An additional JavaScript prelude appended after the {@code rs} façade (e.g. the
+    *                     Code Mode {@code api} binding), or {@code null}.
+    * @param maxMemoryPages The maximum number of 64 KiB WebAssembly pages the QuickJS engine may grow to;
+    *                       {@code <= 0} leaves the engine default in place.
+    */
+   public CustomToolScriptRunner(ObjectMapper mapper, long timeoutMillis, @Nullable String extraPrelude,
+      int maxMemoryPages) {
+         this.mapper = mapper;
+         this.timeoutMillis = timeoutMillis;
+         this.extraPrelude = extraPrelude;
+         this.maxMemoryPages = maxMemoryPages;
+      }
 
    /**
     * Run the given user script with the provided input arguments and host builtins, at script
@@ -126,10 +146,18 @@ public class CustomToolScriptRunner {
    public String run(String userScript, Map<String, Object> input, ReshaprToolsBuiltins builtins, int depth) {
       String fullScript = buildFullScript(userScript, input);
 
-      Engine engine = Engine.builder()
+      Engine.Builder engineBuilder = Engine.builder()
             .addInvokables(ScriptApi_Invokables.toInvokables())
-            .addBuiltins(ReshaprToolsBuiltins_Builtins.toBuiltins(builtins))
-            .build();
+            .addBuiltins(ReshaprToolsBuiltins_Builtins.toBuiltins(builtins));
+
+      if (maxMemoryPages > 0) {
+         // Hard memory budget: cap the WebAssembly linear memory the QuickJS engine may grow to, so a
+         // runaway allocation inside the guest fails the script instead of pressuring the gateway heap.
+         engineBuilder.withMemoryFactory(limits -> new ByteArrayMemory(
+               new MemoryLimits(limits.initialPages(),
+                     Math.max(limits.initialPages(), Math.min(limits.maximumPages(), maxMemoryPages)))));
+      }
+      Engine engine = engineBuilder.build();
 
       try (Runner runner = Runner.builder().withEngine(engine).build()) {
          ScriptApi api = ScriptApi_Invokables.create(fullScript, runner);
@@ -286,6 +314,7 @@ public class CustomToolScriptRunner {
       }
 
       return RS_PRELUDE
+            + (extraPrelude != null ? extraPrelude : "")
             + "const input = " + inputJson + ";\n"
             + "function __process() {\n" + userScript + "\n}\n"
             + "function process() { return JSON.stringify(__process()); }\n";
