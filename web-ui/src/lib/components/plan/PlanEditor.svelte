@@ -79,6 +79,9 @@
 	let audit = $state(false);
 	let backendSecretId = $state('');
 
+	// ── Tool exposure mode (classic tools vs. MCP Code Mode) ────────────────────
+	let toolExposureMode = $state<'TOOLS' | 'CODE' | 'HYBRID'>('TOOLS');
+
 	// ── Caching configuration (MCP >= 2026-07-28) ───────────────────────────────
 	let cachingTtlMs = $state('');
 	let cachingScope = $state<'public' | 'private' | ''>('');
@@ -345,6 +348,11 @@
 		audit = plan.audit === true;
 		backendSecretId = typeof plan.backendSecretId === 'string' ? plan.backendSecretId : '';
 
+		toolExposureMode =
+				plan.toolExposureMode === 'CODE' || plan.toolExposureMode === 'HYBRID'
+						? plan.toolExposureMode
+						: 'TOOLS';
+
 		// Caching configuration
 		const cc = plan.cachePolicy as Record<string, unknown> | null | undefined;
 		cachingTtlMs = cc?.ttlMs != null ? String(cc.ttlMs) : '';
@@ -479,6 +487,7 @@
 		else delete body.backendTimeout;
 
 		body.audit = audit;
+		body.toolExposureMode = toolExposureMode;
 
 		// Caching configuration — send only when at least one field is set; null to clear.
 		const ttlNum = cachingTtlMs.trim();
@@ -747,6 +756,27 @@
 					/>
 					<span>Passthrough <code>Authorization</code> header</span>
 				</label>
+			</div>
+
+			<!-- ── Tool exposure mode ──────────────────────────────────────────── -->
+			<div class="space-y-2 border-t pt-4">
+				<Label for="toolExposureMode">Tool exposure mode</Label>
+				<select
+						id="toolExposureMode"
+						bind:value={toolExposureMode}
+						disabled={loading}
+						class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					<option value="TOOLS">Tools — one MCP tool per exposed operation</option>
+					<option value="CODE">Code Mode — search_tools, get_api_types and execute_code</option>
+					<option value="HYBRID">Hybrid — both</option>
+				</select>
+				<p class="text-muted-foreground text-xs">
+					In Code Mode the client discovers the API on demand and drives it by writing JavaScript
+					executed in the gateway sandbox, which keeps intermediate payloads out of the model
+					context. Calls made from a script still go through this plan's secrets, output filters and
+					audit log.
+				</p>
 			</div>
 
 			<!-- ── Header propagation policy (collapsible) ─────────────────────── -->
