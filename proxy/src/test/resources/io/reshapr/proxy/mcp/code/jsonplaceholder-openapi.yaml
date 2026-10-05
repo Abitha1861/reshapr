@@ -1,0 +1,131 @@
+openapi: 3.0.3
+info:
+  title: JSONPlaceholder
+  version: 1.0.0
+  description: A trimmed-down JSONPlaceholder used to exercise MCP Code Mode end to end.
+paths:
+  /posts:
+    get:
+      operationId: listPosts
+      summary: List the posts, optionally filtered by author.
+      parameters:
+        - name: userId
+          in: query
+          description: Only return the posts written by this user.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The posts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+  /posts/{id}:
+    get:
+      operationId: getPost
+      summary: Get a single post by its identifier.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The post identifier.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The post.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+  /posts/{id}/comments:
+    get:
+      operationId: listPostComments
+      summary: List the comments attached to a post.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The post identifier.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The comments.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+  /users/{id}:
+    get:
+      operationId: getUser
+      summary: Get a single user by its identifier.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The user identifier.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /albums:
+    get:
+      operationId: listAlbums
+      summary: List the photo albums.
+      responses:
+        '200':
+          description: The albums.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+components:
+  schemas:
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        title:
+          type: string
+        body:
+          type: string
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+        postId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        body:
+          type: string
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
