@@ -17,6 +17,8 @@ package io.reshapr.proxy.mcp;
 
 import io.reshapr.proxy.audit.AuditEvent;
 import io.reshapr.proxy.audit.AuditLogger;
+import io.reshapr.proxy.mcp.code.CodeModeExecutor;
+import io.reshapr.proxy.mcp.code.CodeModeTools;
 import io.reshapr.proxy.mcp.converters.McpToolConverter;
 import io.reshapr.proxy.context.SessionInfo;
 import io.reshapr.proxy.mcp.state.SessionStore;
@@ -27,6 +29,7 @@ import io.reshapr.proxy.registry.ConfigurationEntry;
 import io.reshapr.proxy.registry.ExpositionEntry;
 import io.reshapr.proxy.registry.GatewayRegistry;
 import io.reshapr.proxy.registry.ServiceEntry;
+import io.reshapr.proxy.registry.ToolExposureMode;
 import io.reshapr.proxy.security.SecureEndpoint;
 import io.reshapr.proxy.security.SecureEndpointFilter;
 
@@ -49,6 +52,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -773,11 +777,25 @@ public class McpController {
       // Build converter based on service type.
       McpToolConverter converter = toolCallExecutor.buildMcpToolConverter(exposition);
 
-      List<McpSchema.Tool> tools = converter.getExposedOperations(service, configuration).stream()
-            .map(operation -> new McpSchema.Tool(converter.getToolName(operation),
-                  converter.getToolDescription(operation), converter.getInputSchema(operation),
-                  converter.getToolMetadata(gatewayRegistry, service, operation)))
-            .toList();
+      // The tool exposure mode decides what the client sees: the native tools (one per exposed operation),
+      // the Code Mode meta-tools, or both.
+      ToolExposureMode exposureMode = configuration.effectiveToolExposureMode();
+      List<McpSchema.Tool> tools = new ArrayList<>();
+
+      if (exposureMode.exposesNativeTools()) {
+         tools.addAll(converter.getExposedOperations(service, configuration).stream()
+               .map(operation -> new McpSchema.Tool(converter.getToolName(operation),
+                     converter.getToolDescription(operation), converter.getInputSchema(operation),
+                     converter.getToolMetadata(gatewayRegistry, service, operation)))
+               .toList());
+      }
+      if (exposureMode.exposesCodeMode()) {
+         // In hybrid mode the meta-tools shadow a native tool of the same name, mirroring the resolution
+         // order applied by the ToolCallExecutor.
+         tools.removeIf(tool -> CodeModeTools.META_TOOL_NAMES.contains(tool.name()));
+         tools.addAll(new CodeModeExecutor(exposition, converter, toolCallExecutor, gatewayRegistry,
+               toolCallExecutor.codeModeLimits(), mapper).metaToolDefinitions());
+      }
 
       // Delegate the version-specific result shaping to the negotiated protocol dialect. The modern
       // client-cache hints are always provided here; they are honored only under a modern dialect and

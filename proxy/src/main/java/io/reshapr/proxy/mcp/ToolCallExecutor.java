@@ -17,7 +17,9 @@ package io.reshapr.proxy.mcp;
 
 import io.reshapr.proxy.context.MethodHandlingContext;
 import io.reshapr.proxy.context.SessionInfo;
+import io.reshapr.proxy.mcp.code.CodeModeExecutor;
 import io.reshapr.proxy.mcp.code.CodeModeLimits;
+import io.reshapr.proxy.mcp.code.CodeModeTools;
 import io.reshapr.proxy.mcp.converters.CustomToolResolutionException;
 import io.reshapr.proxy.mcp.converters.GraphQLMcpToolConverter;
 import io.reshapr.proxy.mcp.converters.GrpcMcpToolConverter;
@@ -37,6 +39,7 @@ import io.reshapr.proxy.registry.GatewayRegistry;
 import io.reshapr.proxy.registry.OperationEntry;
 import io.reshapr.proxy.registry.SecretEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
+import io.reshapr.proxy.registry.ToolExposureMode;
 import io.reshapr.proxy.util.WebUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -240,14 +243,41 @@ public class ToolCallExecutor {
 
       ConfigurationEntry configuration = exposition.configuration();
 
+      // Build converter based on service type; it resolves the exposed/callable API surface.
+      McpToolConverter converter = buildMcpToolConverter(exposition);
+
+      // MCP Code Mode: the meta-tools replace (or complement) the native tools for top-level client calls
+      // only — a script must never be able to re-enter the sandbox through execute_code. The discovery
+      // meta-tools answer before the elicitation pre-flight, so the API surface stays discoverable even
+      // when the backend credentials have not been elicited yet.
+      CodeModeExecutor codeModeExecutor = null;
+      if (origin == CallOrigin.CLIENT && configuration.effectiveToolExposureMode().exposesCodeMode()) {
+         if (CodeModeTools.META_TOOL_NAMES.contains(toolName)) {
+            codeModeExecutor = new CodeModeExecutor(exposition, converter, this, gatewayRegistry,
+                  codeModeLimits(), mapper);
+            if (CodeModeTools.DISCOVERY_TOOL_NAMES.contains(toolName)) {
+               return codeModeExecutor.call(toolName, arguments, headers);
+            }
+         } else if (configuration.effectiveToolExposureMode() == ToolExposureMode.CODE) {
+            // Pure Code Mode advertises no native tool: direct calls (e.g. from a stale client-side tool
+            // list) are rejected with a pointer to the meta-tools rather than silently honored.
+            return new Failure(McpSchema.ErrorCodes.INVALID_PARAMS, "This exposition runs in Code Mode: tool '"
+                  + toolName + "' can only be called from a '" + CodeModeTools.EXECUTE_CODE
+                  + "' script. Use '" + CodeModeTools.SEARCH_TOOLS + "' and '" + CodeModeTools.GET_API_TYPES
+                  + "' to discover the API surface.", null);
+         }
+      }
+
       // Check whether the backend secret requires elicitation before proceeding.
       ToolCallOutcome elicitationOutcome = checkBackendSecretElicitation(service, configuration);
       if (elicitationOutcome != null) {
          return elicitationOutcome;
       }
 
-      // Build converter based on service type and resolve the target operation.
-      McpToolConverter converter = buildMcpToolConverter(exposition);
+      if (codeModeExecutor != null) {
+         // Remaining meta-tool: execute_code, which needs the backend secret resolved like any tool call.
+         return codeModeExecutor.call(toolName, arguments, new HashMap<>(headers));
+      }
 
       // Top-level client calls resolve against the operations exposed by the config plan; internal script
       // calls resolve against every callable operation (their declared allow-list is the authorization).
