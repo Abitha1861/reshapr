@@ -21,6 +21,8 @@ import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -108,6 +110,14 @@ public class ConfigurationPlan extends TenantAwareEntity {
    @Type(JsonType.class)
    @Column(columnDefinition = "JSONB", name = "header_policy")
    public HeaderPolicy headerPolicy;
+
+   /**
+    * How the gateway advertises the exposed operations to MCP clients. A {@code null} value means
+    * {@link ToolExposureMode#DEFAULT} (one MCP tool per exposed operation).
+    */
+   @Enumerated(EnumType.STRING)
+   @Column(name = "tool_exposure_mode", length = 16)
+   public ToolExposureMode toolExposureMode;
 
    @ManyToOne(fetch = EAGER)
    @JoinColumn(name = "backend_secret_id")

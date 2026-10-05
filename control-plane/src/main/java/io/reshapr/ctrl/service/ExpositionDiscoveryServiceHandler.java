@@ -456,6 +456,9 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
       if (configuration.headerPolicy != null) {
          builder.setHeaderPolicy(grpcHeaderPolicyFromModel(configuration.headerPolicy));
       }
+      if (configuration.toolExposureMode != null) {
+         builder.setToolExposureMode(configuration.toolExposureMode.name());
+      }
       return builder.build();
    }
 

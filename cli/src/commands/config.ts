@@ -20,7 +20,7 @@ import { ConfigUtil } from "../utils/config.js";
 import { openUpdateEditor } from "../utils/editor.js";
 import { Context } from "../utils/context.js";
 import { CLI_LABEL } from '../constants.js';
-import type { ConfigurationPlan, HeaderPolicy, HeaderRename, HeaderRules } from '../types/models.js';
+import type { ConfigurationPlan, HeaderPolicy, HeaderRename, HeaderRules, ToolExposureMode } from '../types/models.js';
 
 export const configCommand = program.command('config')
   .description(`Manage configuration plans in ${CLI_LABEL}`);
@@ -123,6 +123,7 @@ configCommand.command('get <id>')
       Logger.log(`OAuth2          : No`);
     }
     Logger.log(`Audit           : ${config.audit ? 'Yes' : 'No'}`);
+    Logger.log(`Tool Exposure   : ${config.toolExposureMode || 'TOOLS'}`);
     printCachePolicy(config);
     printHeaderPolicy(config);
   });
@@ -153,6 +154,7 @@ configCommand.command('create <name>')
   .option('--reqhp, --requestHeaderPolicy <json>', 'Request header propagation policy as a JSON object with optional allow, deny and rename fields (e.g. \'{"allow":["X-Trace-Id"],"deny":["Cookie"],"rename":["X-Authorization:Authorization"]}\'). Mutually exclusive with --passthrough.')
   .option('--reshp, --responseHeaderPolicy <json>', 'Response header propagation policy as a JSON object with optional allow, deny and rename fields. Reserved for future use (not enforced by the gateway yet).')
   .option('--passthrough', 'Forward the incoming Authorization header to the backend (shortcut adding Authorization to the request header allow-list). Mutually exclusive with --requestHeaderPolicy. Not recommended outside development or debugging.')
+  .option('--tem, --toolExposureMode <mode>', 'How tools are advertised to MCP clients: TOOLS (one tool per operation, default), CODE (only the Code Mode meta-tools) or HYBRID (both).')
   .option('-o, --output <format>', 'Output format (json, yaml)')
   .action(async (name, options) => {
     if (!options.serviceId) {
@@ -185,6 +187,7 @@ configCommand.command('create <name>')
           cacheScope: options.cacheScope
         },
         headerPolicy: buildHeaderPolicy(options),
+        toolExposureMode: parseToolExposureMode(options.toolExposureMode),
         audit: options.audit || false
       })
     });
@@ -233,6 +236,7 @@ configCommand.command('create-oauth <name>')
   .option('--reqhp, --requestHeaderPolicy <json>', 'Request header propagation policy as a JSON object with optional allow, deny and rename fields (e.g. \'{"allow":["X-Trace-Id"],"deny":["Cookie"],"rename":["X-Authorization:Authorization"]}\'). Mutually exclusive with --passthrough.')
   .option('--reshp, --responseHeaderPolicy <json>', 'Response header propagation policy as a JSON object with optional allow, deny and rename fields. Reserved for future use (not enforced by the gateway yet).')
   .option('--passthrough', 'Forward the incoming Authorization header to the backend (shortcut adding Authorization to the request header allow-list). Mutually exclusive with --requestHeaderPolicy. Not recommended outside development or debugging.')
+    .option('--tem, --toolExposureMode <mode>', 'How tools are advertised to MCP clients: TOOLS (one tool per operation, default), CODE (only the Code Mode meta-tools) or HYBRID (both).')
   .option('-o, --output <format>', 'Output format (json, yaml)')
   .action(async (name, options) => {
     if (!options.serviceId) {
@@ -272,6 +276,7 @@ configCommand.command('create-oauth <name>')
           cacheScope: options.cacheScope
         },
         headerPolicy: buildHeaderPolicy(options),
+        toolExposureMode: parseToolExposureMode(options.toolExposureMode),
         audit: options.audit || false
       })
     });
@@ -593,6 +598,19 @@ function parseHeaderRenames(input: unknown, name: string): HeaderRename[] {
     process.exit(1);
     return { from: '', to: '' };
   });
+}
+
+/** Validate and normalize the --toolExposureMode option, returning undefined when it is not set. */
+function parseToolExposureMode(input: unknown): ToolExposureMode | undefined {
+  if (input === undefined || input === null || input === '') {
+    return undefined;
+  }
+  const mode = String(input).toUpperCase();
+  if (mode !== 'TOOLS' && mode !== 'CODE' && mode !== 'HYBRID') {
+    Logger.error(`Invalid --toolExposureMode '${input}'. Expected one of TOOLS, CODE or HYBRID.`);
+    process.exit(1);
+  }
+  return mode as ToolExposureMode;
 }
 
 /** Print the header propagation policy of a configuration plan, when present. */

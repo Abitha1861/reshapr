@@ -149,20 +149,23 @@ public class ConfigurationPlanManagerService {
       newPlan.description = sourcePlan.description;
       newPlan.service = sourcePlan.service;
       newPlan.backendEndpoint = sourcePlan.backendEndpoint;
-      newPlan.backendTimeout = sourcePlan.backendTimeout;
-      newPlan.includedOperations = sourcePlan.includedOperations != null ? new java.util.ArrayList<>(sourcePlan.includedOperations) : null;
-      newPlan.excludedOperations = sourcePlan.excludedOperations != null ? new java.util.ArrayList<>(sourcePlan.excludedOperations) : null;
-      newPlan.includedArtifacts = sourcePlan.includedArtifacts != null ? new java.util.ArrayList<>(sourcePlan.includedArtifacts) : null;
-      newPlan.audit = sourcePlan.audit;
       newPlan.backendSecret = sourcePlan.backendSecret;
+      newPlan.backendTimeout = sourcePlan.backendTimeout;
+      newPlan.includedOperations = sourcePlan.includedOperations != null ? new ArrayList<>(sourcePlan.includedOperations) : null;
+      newPlan.excludedOperations = sourcePlan.excludedOperations != null ? new ArrayList<>(sourcePlan.excludedOperations) : null;
+      newPlan.includedArtifacts = sourcePlan.includedArtifacts != null ? new ArrayList<>(sourcePlan.includedArtifacts) : null;
+      newPlan.audit = sourcePlan.audit;
+      newPlan.cachePolicy = sourcePlan.cachePolicy;
+      newPlan.headerPolicy = sourcePlan.headerPolicy;
+      newPlan.toolExposureMode = sourcePlan.toolExposureMode;
 
       // Duplicate OAuth2 configuration if present
       if (sourcePlan.oauth2Configuration != null) {
          newPlan.oauth2Configuration = new ConfigurationPlan.OAuth2Configuration(
-               sourcePlan.oauth2Configuration.authorizationServers() != null ? new java.util.ArrayList<>(sourcePlan.oauth2Configuration.authorizationServers()) : null,
+               sourcePlan.oauth2Configuration.authorizationServers() != null ? new ArrayList<>(sourcePlan.oauth2Configuration.authorizationServers()) : null,
                sourcePlan.oauth2Configuration.jwksUri(),
-               sourcePlan.oauth2Configuration.scopes() != null ? new java.util.ArrayList<>(sourcePlan.oauth2Configuration.scopes()) : null,
-               sourcePlan.oauth2Configuration.staticAudiences() != null ? new java.util.ArrayList<>(sourcePlan.oauth2Configuration.staticAudiences()) : null,
+               sourcePlan.oauth2Configuration.scopes() != null ? new ArrayList<>(sourcePlan.oauth2Configuration.scopes()) : null,
+               sourcePlan.oauth2Configuration.staticAudiences() != null ? new ArrayList<>(sourcePlan.oauth2Configuration.staticAudiences()) : null,
                sourcePlan.oauth2Configuration.disableAudienceValidation()
          );
       }
@@ -209,6 +212,8 @@ public class ConfigurationPlanManagerService {
       existingPlan.audit = configurationPlan.audit;
       existingPlan.cachePolicy = configurationPlan.cachePolicy;
       existingPlan.headerPolicy = configurationPlan.headerPolicy;
+      existingPlan.toolExposureMode = configurationPlan.toolExposureMode;
+
       if (backendSecretId != null) {
          logger.debugf("Setting backend secret with id %s for configuration plan %s", backendSecretId, existingPlan.name);
          existingPlan.backendSecret = secretRepository.findById(backendSecretId);

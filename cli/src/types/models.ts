@@ -55,6 +55,9 @@ export interface OAuth2Configuration {
   staticAudiences?: string[];
 }
 
+/** How a ConfigurationPlan advertises its service operations to MCP clients. */
+export type ToolExposureMode = 'TOOLS' | 'CODE' | 'HYBRID';
+
 /** A ConfigurationPlan in the reShapr control plane. */
 export interface ConfigurationPlan {
   id?: string;
@@ -74,6 +77,7 @@ export interface ConfigurationPlan {
   cachePolicy?: CachePolicy;
   headerPolicy?: HeaderPolicy;
   oauth2Configuration?: OAuth2Configuration;
+  toolExposureMode?: ToolExposureMode;
 }
 
 /** Minimal Service information as nested in an Exposition or ActiveExposition. */

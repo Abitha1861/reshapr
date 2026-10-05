@@ -1283,6 +1283,23 @@ components:
           description: Header propagation policy controlling which request/response headers
             are forwarded to/from the backend. When absent the proxy applies its built-in
             defaults (e.g. Authorization and Cookie are stripped from backend requests).
+        toolExposureMode:
+          $ref: '#/components/schemas/ToolExposureMode'
+          description: How the gateway advertises the exposed operations to MCP clients.
+            When absent, TOOLS applies.
+    ToolExposureMode:
+      description: >-
+        How a Configuration Plan advertises its service operations to MCP clients.
+        TOOLS exposes one MCP tool per exposed operation (classic function calling).
+        CODE enables MCP Code Mode, where tools/list only advertises the search_tools,
+        get_api_types and execute_code meta-tools and the client drives the API by
+        submitting JavaScript executed in the gateway sandbox. HYBRID advertises both.
+      type: string
+      enum:
+        - TOOLS
+        - CODE
+        - HYBRID
+      default: TOOLS
     CachePolicy:
       description: Caching configuration of a Configuration Plan. Both fields are optional;
         when absent the proxy falls back to its built-in defaults.

@@ -33,7 +33,8 @@ public record ConfigurationEntry(
       SecretEntry backendSecret,
       boolean audit,
       CachePolicyEntry cachePolicy,
-      HeaderPolicyEntry headerPolicy) {
+      HeaderPolicyEntry headerPolicy,
+      ToolExposureMode toolExposureMode) {
 
 
    public ConfigurationEntry(String id, String name, String backendEndpoint, Long backendTimeout,
@@ -53,6 +54,14 @@ public record ConfigurationEntry(
                              String apiKey, OAuth2ConfigurationEntry oauth2Configuration, SecretEntry backendSecret,
                              boolean audit, CachePolicyEntry cachePolicy) {
       this(id, name, backendEndpoint, backendTimeout, excludedOperations, includedOperations, apiKey, oauth2Configuration, backendSecret, audit, cachePolicy, null);
+
+   }
+
+   public ConfigurationEntry(String id, String name, String backendEndpoint, Long backendTimeout,
+                             List<String> excludedOperations, List<String> includedOperations,
+                             String apiKey, OAuth2ConfigurationEntry oauth2Configuration, SecretEntry backendSecret,
+                             boolean audit, CachePolicyEntry cachePolicy, HeaderPolicyEntry headerPolicy) {
+      this(id, name, backendEndpoint, backendTimeout, excludedOperations, includedOperations, apiKey, oauth2Configuration, backendSecret, audit, cachePolicy, headerPolicy, null);
    }
 
    @Override
@@ -133,5 +142,14 @@ public record ConfigurationEntry(
     * @param to   Target header name.
     */
    public record HeaderRenameEntry(String from, String to) {
+   }
+
+   /**
+    * The tool exposure mode effectively applied by this configuration plan, defaulting to
+    * {@link ToolExposureMode#DEFAULT} when the plan declares none.
+    * @return The effective tool exposure mode, never {@code null}.
+    */
+   public ToolExposureMode effectiveToolExposureMode() {
+      return toolExposureMode != null ? toolExposureMode : ToolExposureMode.DEFAULT;
    }
 }

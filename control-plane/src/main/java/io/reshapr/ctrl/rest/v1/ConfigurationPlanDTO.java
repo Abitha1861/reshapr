@@ -15,6 +15,7 @@
  */
 package io.reshapr.ctrl.rest.v1;
 
+import io.reshapr.ctrl.model.ToolExposureMode;
 import io.reshapr.json.HtmlEncodedStringDeserializer;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -51,6 +52,7 @@ public class ConfigurationPlanDTO {
    protected boolean audit;
    protected CachePolicyDTO cachePolicy;
    protected HeaderPolicyDTO headerPolicy;
+   protected ToolExposureMode toolExposureMode;
 
    // Indicates whether to use the internal identity provider for OAuth2 authentication.
    protected String initialAccessToken;
@@ -189,6 +191,14 @@ public class ConfigurationPlanDTO {
 
    public void setHeaderPolicy(HeaderPolicyDTO headerPolicy) {
       this.headerPolicy = headerPolicy;
+   }
+
+   public ToolExposureMode getToolExposureMode() {
+      return toolExposureMode;
+   }
+
+   public void setToolExposureMode(ToolExposureMode toolExposureMode) {
+      this.toolExposureMode = toolExposureMode;
    }
 
    /**

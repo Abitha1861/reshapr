@@ -50,6 +50,7 @@ public interface Mappers {
    @Mapping(target = "backendTimeout", expression = "java(configuration.hasBackendTimeout() ? configuration.getBackendTimeout() : null)")
    @Mapping(target = "cachePolicy", expression = "java(configuration.hasCachePolicy() ? toCachePolicyEntry(configuration.getCachePolicy()) : null)")
    @Mapping(target = "headerPolicy", expression = "java(configuration.hasHeaderPolicy() ? toHeaderPolicyEntry(configuration.getHeaderPolicy()) : null)")
+   @Mapping(target = "toolExposureMode", expression = "java(configuration.hasToolExposureMode() ? ToolExposureMode.fromValue(configuration.getToolExposureMode()) : null)")
    public ConfigurationEntry toConfigurationEntry(Configuration configuration);
 
    /** Maps the gRPC {@link CachePolicy} optional fields to a {@link ConfigurationEntry.CachePolicyEntry}. */
