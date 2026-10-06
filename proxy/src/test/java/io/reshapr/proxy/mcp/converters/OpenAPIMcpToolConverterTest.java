@@ -35,9 +35,11 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This is a test case for OpenAPIMcpToolConverter.
@@ -152,5 +154,81 @@ class OpenAPIMcpToolConverterTest {
       // Same cached instance is reused: converter B did not re-parse (no cache overwrite happened).
       assertSame(cachedSchema, cache.get("shared-art", "oapimcptc-schema"),
             "the second exposition must reuse the shared cache entry keyed by artifact id");
+   }
+
+   /**
+    * Parameters may be declared at the path item level, shared by all the verbs of that path. They must be
+    * merged into the input schema, operation level parameters overriding path item ones on name + location.
+    */
+   @Test
+   void testPathItemLevelParametersAreMerged() {
+      String spec = """
+            openapi: 3.1.0
+            info:
+              title: Repro API
+              version: 1.0.0
+            paths:
+              '/widgets/{widgetId}':
+                parameters:
+                  - name: widgetId
+                    in: path
+                    required: true
+                    description: The widget identifier
+                    schema:
+                      type: string
+                  - name: verbose
+                    in: query
+                    required: false
+                    schema:
+                      type: string
+                get:
+                  operationId: get-widget
+                  responses:
+                    '200':
+                      description: OK
+                put:
+                  operationId: put-widget
+                  parameters:
+                    - name: verbose
+                      in: query
+                      required: true
+                      schema:
+                        type: boolean
+                  responses:
+                    '200':
+                      description: OK
+            """;
+
+      OperationEntry getOperation = new OperationEntry("GET /widgets/{widgetId}", "GET", null, null, null);
+      OperationEntry putOperation = new OperationEntry("PUT /widgets/{widgetId}", "PUT", null, null, null);
+
+      ArtifactEntry artifactEntry = new ArtifactEntry("path-item-params", "spec.yaml", "REST",
+            ArtifactEntryType.OPEN_API_SPEC, true, spec);
+      ServiceEntry serviceEntry = new ServiceEntry("svc", "acme", "Repro API", "1.0.0", "REST",
+            List.of(getOperation, putOperation));
+      ConfigurationEntry configurationEntry = new ConfigurationEntry("1", "Repro-API-default",
+            null, null, null, null, null, null, null);
+      ExpositionEntry exposition = new ExpositionEntry("1", "Repro-API-default", serviceEntry, configurationEntry,
+            artifactEntry, List.of());
+
+      ObjectMapper objectMapper = new ObjectMapper();
+      OpenAPIMcpToolConverter converter = new OpenAPIMcpToolConverter(exposition, new WorkCache(1000),
+            objectMapper, new ProxyService(new SecretReferenceResolver(List.of()), new UserSecretStore(null)));
+
+      // Operation without its own parameters only inherits the path item level ones.
+      McpSchema.JsonSchema getSchema = converter.getInputSchema(getOperation);
+      assertNotNull(getSchema);
+      assertTrue(getSchema.properties().containsKey("widgetId"));
+      assertTrue(getSchema.properties().containsKey("verbose"));
+      assertTrue(getSchema.required().contains("widgetId"));
+      assertFalse(getSchema.required().contains("verbose"));
+
+      // Operation level parameter overrides the path item one having same name and location.
+      McpSchema.JsonSchema putSchema = converter.getInputSchema(putOperation);
+      assertNotNull(putSchema);
+      assertTrue(putSchema.properties().containsKey("widgetId"));
+      assertTrue(putSchema.required().contains("verbose"));
+      assertEquals(2, putSchema.properties().size());
+      assertEquals("boolean", ((java.util.Map<?, ?>) putSchema.properties().get("verbose")).get("type"));
    }
 }

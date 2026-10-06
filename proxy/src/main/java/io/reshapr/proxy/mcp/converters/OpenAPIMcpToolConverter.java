@@ -344,20 +344,87 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
             List.of(path, verb, "requestBody", "content", "application/json", "schema"));
    }
 
-   /** Get the parameters node for an operation. */
+   /**
+    * Get the parameters node for an operation. Per the OpenAPI specification, parameters may be declared
+    * at the path item level (shared by every verb of that path) and/or at the operation level. Both are
+    * merged here, operation level ones overriding path item ones having the same name and location.
+    */
    private JsonNode getParametersNode(JsonNode schemaNode, OperationEntry operation) throws Exception {
       String verb = operation.name().split(" ")[0].toLowerCase();
       String path = operation.name().split(" ")[1].trim();
 
+      String escapedPath = path.replace("/", "~1");
+
+      JsonNode operationParamsNode = resolveParametersNode(schemaNode,
+            OPEN_API_PATHS_ELEMENT + escapedPath + "/" + verb + "/parameters", List.of(path, verb, "parameters"));
+      JsonNode pathItemParamsNode = resolveParametersNode(schemaNode,
+            OPEN_API_PATHS_ELEMENT + escapedPath + "/parameters", List.of(path, "parameters"));
+
+      return mergeParametersNodes(schemaNode, pathItemParamsNode, operationParamsNode);
+   }
+
+   /** Resolve a parameters node, using the direct pointer first and falling back to a segment traversal. */
+   private JsonNode resolveParametersNode(JsonNode schemaNode, String paramsPointer, List<String> segments) throws Exception {
       // Most common case first: whole path is in same document.
-      String paramsPointer = OPEN_API_PATHS_ELEMENT + path.replace("/", "~1") + "/" + verb + "/parameters";
       JsonNode paramsNode = schemaNode.at(paramsPointer);
       if (!paramsNode.isMissingNode()) {
          return followRefIfAny(schemaNode, paramsNode);
       }
 
       // Worst case: follow all segments independently, starting from paths.
-      return traversePath(schemaNode, schemaNode.get("paths"), List.of(path, verb, "parameters"));
+      return traversePath(schemaNode, schemaNode.get("paths"), segments);
+   }
+
+   /** Merge path item level parameters with operation level ones, the latter taking precedence. */
+   private JsonNode mergeParametersNodes(JsonNode schemaNode, JsonNode pathItemParamsNode, JsonNode operationParamsNode) {
+      boolean hasPathItemParams = pathItemParamsNode != null && pathItemParamsNode.isArray() && !pathItemParamsNode.isEmpty();
+      boolean hasOperationParams = operationParamsNode != null && !operationParamsNode.isMissingNode();
+
+      if (!hasPathItemParams) {
+         return operationParamsNode;
+      }
+      if (!hasOperationParams) {
+         return pathItemParamsNode;
+      }
+      if (!operationParamsNode.isArray()) {
+         return operationParamsNode;
+      }
+
+      Set<String> operationParamKeys = new HashSet<>();
+      for (JsonNode parameter : operationParamsNode) {
+         String key = parameterKey(schemaNode, parameter);
+         if (key != null) {
+            operationParamKeys.add(key);
+         }
+      }
+
+      ArrayNode mergedParamsNode = mapper.createArrayNode();
+      for (JsonNode parameter : pathItemParamsNode) {
+         String key = parameterKey(schemaNode, parameter);
+         if (key == null || !operationParamKeys.contains(key)) {
+            mergedParamsNode.add(parameter);
+         }
+      }
+      mergedParamsNode.addAll((ArrayNode) operationParamsNode);
+      return mergedParamsNode;
+   }
+
+   /** Build the {in}:{name} identity key of a parameter node, or null if it cannot be resolved. */
+   private String parameterKey(JsonNode schemaNode, JsonNode parameterNode) {
+      try {
+         JsonNode resolvedNode = followRefIfAny(schemaNode, parameterNode);
+         if (resolvedNode == null || resolvedNode.isMissingNode()) {
+            return null;
+         }
+         String name = resolvedNode.path("name").asText("");
+         if (name.isEmpty()) {
+            return null;
+         }
+         return resolvedNode.path("in").asText("") + ":" + name;
+      } catch (Exception e) {
+         logger.debugf("Cannot resolve parameter node while merging parameters: %s", e.getMessage());
+         return null;
+      }
    }
 
    /** Traverse a path using the provided segments. */

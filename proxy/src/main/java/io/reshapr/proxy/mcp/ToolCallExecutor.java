@@ -314,6 +314,14 @@ public class ToolCallExecutor {
          return new Failure(McpSchema.ErrorCodes.INTERNAL_ERROR, e.getMessage(), null);
       }
 
+      if (response == null) {
+         // Converters return null when the backend request cannot be built or executed: surface a clean
+         // MCP error instead of letting a NullPointerException escape as a non-JSON-RPC 500 response.
+         logger.warnf("Cannot build a backend call for tool '%s' on service '%s'", toolName, service.name());
+         return new Failure(McpSchema.ErrorCodes.INTERNAL_ERROR,
+               "Cannot execute tool '" + toolName + "': the backend call could not be built or completed.", null);
+      }
+
       String content = response.content();
 
       // Apply output filters if a ToolsOutputFilters artifact is attached.
