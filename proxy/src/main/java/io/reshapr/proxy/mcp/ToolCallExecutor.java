@@ -92,6 +92,10 @@ public class ToolCallExecutor {
    @ConfigProperty(name = "reshapr.gateway.scripting.max-depth", defaultValue = "5")
    int scriptMaxDepth;
 
+   // 256 pages == 16 MiB of on-heap linear memory per concurrent script. QuickJS needs 24 pages to boot
+   // and a script holding 5 MiB of intermediate JSON needs 128, so this leaves ample headroom while
+   // keeping the worst case bounded: the script executor is unbounded, so this value is multiplied by
+   // the number of concurrent scripts.
    @ConfigProperty(name = "reshapr.gateway.scripting.max-memory-pages", defaultValue = "256")
    int scriptMaxMemoryPages;
 
@@ -101,6 +105,9 @@ public class ToolCallExecutor {
    @ConfigProperty(name = "reshapr.gateway.code-mode.max-tool-calls", defaultValue = "10")
    int codeModeMaxToolCalls;
 
+   // 4000 characters is ~100 lines: eight times the largest snippet our own demo and tests produce,
+   // while still firing early on a model stuck in a generation loop. Note this measures the submitted
+   // code only, not the api prelude prepended to it.
    @ConfigProperty(name = "reshapr.gateway.code-mode.max-code-size", defaultValue = "4000")
    int codeModeMaxCodeSize;
 
@@ -276,6 +283,15 @@ public class ToolCallExecutor {
 
       if (codeModeExecutor != null) {
          // Remaining meta-tool: execute_code, which needs the backend secret resolved like any tool call.
+         // A snippet may call any of its exposed tools, and those may call what they declare, so the whole
+         // reachable closure is pre-flighted before the sandbox starts. Eliciting up-front rather than on
+         // the first failing call is what keeps a paused script from replaying its side effects on retry,
+         // and it is the only way the elicitation URL can reach the client: from inside the sandbox it
+         // would be flattened into a plain tool error.
+         ToolCallOutcome codeModePreflight = preflightToolsElicitation(exposition, codeModeExecutor.reachableTools());
+         if (codeModePreflight != null) {
+            return codeModePreflight;
+         }
          return codeModeExecutor.call(toolName, arguments, new HashMap<>(headers));
       }
 

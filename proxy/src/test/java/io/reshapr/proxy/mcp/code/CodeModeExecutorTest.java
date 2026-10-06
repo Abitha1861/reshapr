@@ -15,6 +15,7 @@
  */
 package io.reshapr.proxy.mcp.code;
 
+import io.reshapr.proxy.mcp.DeclaredTool;
 import io.reshapr.proxy.mcp.McpSchema;
 import io.reshapr.proxy.mcp.ToolCallExecutor;
 import io.reshapr.proxy.mcp.WorkCache;
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -54,11 +56,21 @@ class CodeModeExecutorTest {
 
    private static final ObjectMapper MAPPER = new ObjectMapper();
 
-   private static final CodeModeLimits LIMITS = new CodeModeLimits(10_000L, 10, 5, 256, 1000, 5000);
+   private static final CodeModeLimits LIMITS = new CodeModeLimits(10_000L, 10, 5, 2048, 1000, 5000);
 
    /** A converter exposing three tools with trivial input schemas. */
    private static McpToolConverter stubConverter() {
+      return stubConverter(operation -> null);
+   }
+
+   /** Same stub, with a controllable {@code getDeclaredTools} so a tool can act as a scripted custom tool. */
+   private static McpToolConverter stubConverter(Function<OperationEntry, List<DeclaredTool>> declaredTools) {
       return new McpToolConverter() {
+         @Override
+         public List<DeclaredTool> getDeclaredTools(OperationEntry operation) {
+            return declaredTools.apply(operation);
+         }
+
          @Override
          public String getToolDescription(OperationEntry operation) {
             return switch (operation.name()) {
@@ -117,9 +129,13 @@ class CodeModeExecutorTest {
    }
 
    private static CodeModeExecutor codeMode(ExpositionEntry exposition) {
+      return codeMode(exposition, stubConverter());
+   }
+
+   private static CodeModeExecutor codeMode(ExpositionEntry exposition, McpToolConverter converter) {
       GatewayRegistry registry = new GatewayRegistry();
       registry.addExposition(exposition);
-      return new CodeModeExecutor(exposition, stubConverter(), echoExecutor(registry), registry, LIMITS, MAPPER);
+      return new CodeModeExecutor(exposition, converter, echoExecutor(registry), registry, LIMITS, MAPPER);
    }
 
    private static CodeModeExecutor defaultCodeMode() {
@@ -375,6 +391,56 @@ class CodeModeExecutorTest {
             defaultCodeMode().call(CodeModeTools.EXECUTE_CODE, Map.of("code", code), Map.of())));
 
       assertTrue(result.get("refused").toString().contains("Maximum number of tool calls"));
+   }
+
+   // ---------------------------------------------------------------------------------------------
+   // reachable closure (elicitation pre-flight)
+   // ---------------------------------------------------------------------------------------------
+
+   @Test
+   void testReachableToolsIsTheExposedSurfaceWhenNothingIsDeclared() {
+      List<DeclaredTool> reachable = defaultCodeMode().reachableTools();
+
+      // No tool declares anything, so a snippet can only reach its own exposition.
+      assertEquals(List.of(new DeclaredTool(null, "listIssues"), new DeclaredTool(null, "getIssue"),
+            new DeclaredTool(null, "searchRepositories")), reachable);
+      assertTrue(reachable.stream().allMatch(DeclaredTool::isSameService));
+   }
+
+   @Test
+   void testReachableToolsIncludesWhatAnExposedToolDeclares() {
+      // 'getIssue' behaves as a scripted custom tool reaching another service, whose exposition carries its
+      // own backend secret: the pre-flight must see it even though no snippet has been submitted yet.
+      ExpositionEntry exposition = exposition(List.of("listIssues", "getIssue"), List.of());
+      CodeModeExecutor codeMode = codeMode(exposition, stubConverter(operation ->
+            "getIssue".equals(operation.name()) ? List.of(new DeclaredTool("billing:v1", "getInvoice")) : null));
+
+      assertEquals(List.of(new DeclaredTool(null, "listIssues"), new DeclaredTool(null, "getIssue"),
+            new DeclaredTool("billing:v1", "getInvoice")), codeMode.reachableTools());
+   }
+
+   @Test
+   void testReachableToolsStopsAtTheToolsThePlanHides() {
+      // 'searchRepositories' is excluded from the plan, so a snippet can never trigger its declared call.
+      // Pre-flighting it anyway would make the user connect a service the script cannot even reach.
+      ExpositionEntry exposition =
+            exposition(List.of("listIssues", "searchRepositories"), List.of("listIssues"));
+      CodeModeExecutor codeMode = codeMode(exposition, stubConverter(operation ->
+            "searchRepositories".equals(operation.name())
+                  ? List.of(new DeclaredTool("billing:v1", "getInvoice")) : null));
+
+      assertEquals(List.of(new DeclaredTool(null, "listIssues")), codeMode.reachableTools());
+   }
+
+   @Test
+   void testReachableToolsDeduplicatesASharedTarget() {
+      // Two custom tools fanning out to the same target must not yield two elicitations for one secret.
+      ExpositionEntry exposition = exposition(List.of("listIssues", "getIssue"), List.of());
+      CodeModeExecutor codeMode = codeMode(exposition,
+            stubConverter(operation -> List.of(new DeclaredTool("billing:v1", "getInvoice"))));
+
+      assertEquals(List.of(new DeclaredTool(null, "listIssues"), new DeclaredTool("billing:v1", "getInvoice"),
+            new DeclaredTool(null, "getIssue")), codeMode.reachableTools());
    }
 
    @Test

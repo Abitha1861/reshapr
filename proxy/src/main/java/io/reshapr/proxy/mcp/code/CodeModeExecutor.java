@@ -34,9 +34,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Serves the three MCP Code Mode meta-tools for a single exposition: {@code search_tools} (progressive
@@ -66,6 +68,10 @@ public class CodeModeExecutor {
    /** Lazily resolved exposed API surface, shared by the three meta-tools within one request. */
    @Nullable
    private List<ExposedTool> exposedTools;
+
+   /** Lazily resolved closure of the tools a snippet can reach, for the elicitation pre-flight. */
+   @Nullable
+   private List<DeclaredTool> reachableTools;
 
    /**
     * Build a CodeModeExecutor bound to an exposition.
@@ -104,6 +110,40 @@ public class CodeModeExecutor {
          exposedTools = List.copyOf(tools);
       }
       return exposedTools;
+   }
+
+   /**
+    * Every tool a snippet can reach, used to drive the elicitation pre-flight before the sandbox starts.
+    * <p>
+    * The set is derived from the configuration plan, never from the submitted code: a snippet may only call
+    * the tools of {@link #exposedTools()} (enforced by the allow-list of
+    * {@link ReshaprToolsBuiltins}), and each of those may in turn only call what it declares through
+    * {@link McpToolConverter#getDeclaredTools(OperationEntry)}. The closure is therefore complete by
+    * construction and no parsing of the snippet is needed — which is what makes a sound pre-flight possible
+    * at all, since the code may compute its tool names at runtime.
+    * <p>
+    * Like the pre-flight of scripted custom tools, this stops at the first level of declared tools: a
+    * cross-service tool that is itself a scripted custom tool does not get its own declarations followed.
+    * @return The reachable tools, deduplicated, in advertisement order.
+    */
+   public List<DeclaredTool> reachableTools() {
+      if (reachableTools == null) {
+         List<OperationEntry> operations =
+               converter.getExposedOperations(exposition.service(), exposition.configuration());
+         Set<DeclaredTool> closure = new LinkedHashSet<>();
+         for (OperationEntry operation : operations) {
+            // What the snippet calls directly, i.e. the allow-list it runs under.
+            closure.add(new DeclaredTool(null, converter.getToolName(operation)));
+            // What that tool may itself call: null for a plain REST/GraphQL/gRPC operation, a declared
+            // allow-list for a scripted custom tool, possibly targeting another service.
+            List<DeclaredTool> declaredTools = converter.getDeclaredTools(operation);
+            if (declaredTools != null) {
+               closure.addAll(declaredTools);
+            }
+         }
+         reachableTools = List.copyOf(closure);
+      }
+      return reachableTools;
    }
 
    /** The Code Mode meta-tool definitions to advertise in {@code tools/list}. */

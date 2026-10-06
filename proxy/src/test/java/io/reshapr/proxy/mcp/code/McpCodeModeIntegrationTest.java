@@ -23,6 +23,7 @@ import io.reshapr.proxy.registry.ConfigurationEntry;
 import io.reshapr.proxy.registry.ExpositionEntry;
 import io.reshapr.proxy.registry.GatewayRegistry;
 import io.reshapr.proxy.registry.OperationEntry;
+import io.reshapr.proxy.registry.SecretEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
 import io.reshapr.proxy.registry.ToolExposureMode;
 
@@ -42,6 +43,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
@@ -73,6 +75,8 @@ class McpCodeModeIntegrationTest {
    private static final String TOOLS_EXPOSITION = "code-mode-tools-exp";
    private static final String CODE_EXPOSITION = "code-mode-code-exp";
    private static final String HYBRID_EXPOSITION = "code-mode-hybrid-exp";
+   private static final String ELICIT_EXPOSITION = "code-mode-elicit-exp";
+   private static final String BILLING_EXPOSITION = "code-mode-billing-exp";
 
    /** Tool names produced by the OpenAPI converter for the stubbed JSONPlaceholder operations. */
    private static final String LIST_POSTS = "get_posts";
@@ -178,6 +182,52 @@ class McpCodeModeIntegrationTest {
             plan("cfg-code", ToolExposureMode.CODE, List.of("GET /albums")), artifact, List.of()));
       registry.addExposition(new ExpositionEntry(HYBRID_EXPOSITION, "jsonplaceholder-hybrid", service,
             plan("cfg-hybrid", ToolExposureMode.HYBRID, List.of()), artifact, List.of()));
+
+      seedElicitationExpositions(service, artifact);
+   }
+
+   /**
+    * Seed the fixture of the Code Mode elicitation pre-flight: a CODE exposition carrying a scripted custom
+    * tool that declares a call to another service, whose own exposition requires an elicited backend secret.
+    * The elicitation is therefore <b>not</b> on the Code Mode exposition itself, so it can only be surfaced
+    * by walking the tools a snippet may reach.
+    */
+   private void seedElicitationExpositions(ServiceEntry service, ArtifactEntry artifact) {
+      ServiceEntry billing = new ServiceEntry("code-mode-billing-svc", "acme", "Billing", "1.0.0", "REST",
+            List.of(new OperationEntry("GET /invoices", "GET", null, null, null)));
+      SecretEntry elicitedSecret = new SecretEntry("billing-credentials", null, null, null, null, null,
+            true, null);
+      registry.addExposition(new ExpositionEntry(BILLING_EXPOSITION, "billing", billing,
+            new ConfigurationEntry("cfg-billing", "cfg-billing", backendEndpoint, null, List.of(),
+                  List.of(), null, null, elicitedSecret, false, null, null, ToolExposureMode.TOOLS),
+            artifact, List.of()));
+
+      String customTools = """
+            apiVersion: reshapr.io/v1alpha1
+            kind: CustomTools
+            service:
+              name: JSONPlaceholder
+              version: '1.0.0'
+            customTools:
+              post_with_invoice:
+                description: Get a post and its related invoice.
+                input:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                tools:
+                  - tool: get_invoices
+                    service: Billing:1.0.0
+                script: |
+                  const post = rs.callTool('%s', { id: input.id });
+                  return { post: post };
+            """.formatted(GET_POST);
+      ArtifactEntry customToolsArtifact = new ArtifactEntry("code-mode-custom-tools", "custom-tools.yaml",
+            "CUSTOM_TOOLS", ArtifactEntryType.RESHAPR_CUSTOM_TOOLS, false, customTools);
+
+      registry.addExposition(new ExpositionEntry(ELICIT_EXPOSITION, "jsonplaceholder-elicit", service,
+            plan("cfg-elicit", ToolExposureMode.CODE, List.of()), artifact, List.of(customToolsArtifact)));
    }
 
    /** An unsecured plan (no apiKey, no OAuth2, no backend secret) so the MCP endpoint stays public. */
@@ -197,9 +247,9 @@ class McpCodeModeIntegrationTest {
             .contentType(ContentType.JSON)
             .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
             .body(jsonRpc("tools/list", "{}"))
-      .when()
+            .when()
             .post("/mcp/{expositionId}", TOOLS_EXPOSITION)
-      .then()
+            .then()
             .statusCode(200)
             .body("error", nullValue())
             .body("result.tools", hasSize(5))
@@ -214,9 +264,9 @@ class McpCodeModeIntegrationTest {
             .contentType(ContentType.JSON)
             .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
             .body(jsonRpc("tools/list", "{}"))
-      .when()
+            .when()
             .post("/mcp/{expositionId}", CODE_EXPOSITION)
-      .then()
+            .then()
             .statusCode(200)
             .body("result.tools", hasSize(3))
             .body("result.tools.name", hasItems(CodeModeTools.SEARCH_TOOLS, CodeModeTools.GET_API_TYPES,
@@ -234,9 +284,9 @@ class McpCodeModeIntegrationTest {
             .contentType(ContentType.JSON)
             .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
             .body(jsonRpc("tools/list", "{}"))
-      .when()
+            .when()
             .post("/mcp/{expositionId}", HYBRID_EXPOSITION)
-      .then()
+            .then()
             .statusCode(200)
             .body("result.tools", hasSize(8))
             .body("result.tools.name", hasItems(LIST_POSTS, LIST_ALBUMS,
@@ -291,9 +341,9 @@ class McpCodeModeIntegrationTest {
             .contentType(ContentType.JSON)
             .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
             .body(callTool(CodeModeTools.GET_API_TYPES, "{\"tools\":[\"" + LIST_ALBUMS + "\"]}"))
-      .when()
+            .when()
             .post("/mcp/{expositionId}", CODE_EXPOSITION)
-      .then()
+            .then()
             .statusCode(200)
             .body("result", nullValue())
             .body("error.code", equalTo(McpSchema.ErrorCodes.INVALID_PARAMS))
@@ -370,9 +420,9 @@ class McpCodeModeIntegrationTest {
             .contentType(ContentType.JSON)
             .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
             .body(callTool(CodeModeTools.EXECUTE_CODE, codeArgument("return this is not javascript;")))
-      .when()
+            .when()
             .post("/mcp/{expositionId}", CODE_EXPOSITION)
-      .then()
+            .then()
             .statusCode(200)
             // Not a JSON-RPC error: the model must read the message and retry with corrected code.
             .body("error", nullValue())
@@ -389,9 +439,9 @@ class McpCodeModeIntegrationTest {
             .contentType(ContentType.JSON)
             .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
             .body(callTool(CodeModeTools.EXECUTE_CODE, "{}"))
-      .when()
+            .when()
             .post("/mcp/{expositionId}", CODE_EXPOSITION)
-      .then()
+            .then()
             .statusCode(200)
             .body("error.code", equalTo(McpSchema.ErrorCodes.INVALID_PARAMS));
    }
@@ -407,9 +457,9 @@ class McpCodeModeIntegrationTest {
             .contentType(ContentType.JSON)
             .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
             .body(callTool(LIST_POSTS, "{}"))
-      .when()
+            .when()
             .post("/mcp/{expositionId}", CODE_EXPOSITION)
-      .then()
+            .then()
             .statusCode(200)
             .body("result", nullValue())
             .body("error.code", equalTo(McpSchema.ErrorCodes.INVALID_PARAMS))
@@ -436,9 +486,9 @@ class McpCodeModeIntegrationTest {
             .contentType(ContentType.JSON)
             .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
             .body(callTool(CodeModeTools.EXECUTE_CODE, codeArgument("return 1;")))
-      .when()
+            .when()
             .post("/mcp/{expositionId}", TOOLS_EXPOSITION)
-      .then()
+            .then()
             .statusCode(200)
             .body("result", nullValue())
             .body("error.code", equalTo(McpSchema.ErrorCodes.INVALID_PARAMS))
@@ -455,13 +505,63 @@ class McpCodeModeIntegrationTest {
             .contentType(ContentType.JSON)
             .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
             .body(callTool(toolName, argumentsJson))
-      .when()
-            .post("/mcp/{expositionId}", expositionId)
-      .then()
-            .statusCode(200)
-            .body("error", nullValue())
-            .extract().response();
+            .when()
+                  .post("/mcp/{expositionId}", expositionId)
+            .then()
+                  .statusCode(200)
+                  .body("error", nullValue())
+                  .extract().response();
       return response.jsonPath().getString("result.content[0].text");
+   }
+
+   // ---------------------------------------------------------------------------------------------
+   // Elicitation pre-flight of the reachable closure
+   // ---------------------------------------------------------------------------------------------
+
+   @Test
+   @DisplayName("execute_code pre-flights the elicitation of the tools a snippet may reach")
+   void testExecuteCodePreflightsTheReachableClosure() {
+      // Nothing on this exposition requires elicitation; only 'post_with_invoice' declares a call to the
+      // Billing service, whose exposition carries an elicited secret. The pre-flight has to walk there
+      // before the sandbox starts, otherwise the elicitation would be raised from inside the script and
+      // flattened into an opaque tool error, leaving the user no way to connect.
+      given()
+            .contentType(ContentType.JSON)
+            .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
+            .body(callTool(CodeModeTools.EXECUTE_CODE, codeArgument("return { ok: true };")))
+            .when()
+               .post("/mcp/{expositionId}", ELICIT_EXPOSITION)
+            .then()
+               .statusCode(200)
+               // This exposition is not OAuth-protected, so the stateless pre-flight cannot bind the secret to
+               // a user identity and says so. Reaching this message proves the pre-flight ran.
+               .body("error.message", containsString("Elicitation in stateless mode"));
+   }
+
+   @Test
+   @DisplayName("the pre-flight never fires for a snippet that cannot reach an elicited secret")
+   void testExecuteCodeRunsWhenNothingReachableNeedsElicitation() {
+      // Control: the same snippet on the plain CODE exposition is unaffected, so the pre-flight is driven by
+      // the reachable closure and not by the mere presence of an elicited secret somewhere in the registry.
+      assertTrue(callToolContent(CODE_EXPOSITION, CodeModeTools.EXECUTE_CODE,
+            codeArgument("return { ok: true };")).contains("\"ok\":true"));
+   }
+
+   @Test
+   @DisplayName("discovery still works on an exposition whose closure requires elicitation")
+   void testDiscoveryIsNotBlockedByThePreflight() {
+      // Progressive disclosure must stay available before any credential is connected: a model has to be
+      // able to read the API surface to decide whether connecting is even worth it.
+      given()
+            .contentType(ContentType.JSON)
+            .header(McpSchema.HEADER_PROTOCOL_VERSION, McpSchema.PROTOCOL_VERSION_STATELESS)
+            .body(callTool(CodeModeTools.SEARCH_TOOLS, "{}"))
+            .when()
+               .post("/mcp/{expositionId}", ELICIT_EXPOSITION)
+            .then()
+               .statusCode(200)
+               .body("error", nullValue())
+               .body("result.content[0].text", containsString("post_with_invoice"));
    }
 
    /** Build a {@code tools/call} JSON-RPC request. */
