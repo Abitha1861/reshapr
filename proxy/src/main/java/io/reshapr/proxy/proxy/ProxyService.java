@@ -117,10 +117,12 @@ public class ProxyService {
       // Set timeout with priority to configuration value, then default if not set.
       long timeoutMs = configuration.backendTimeout() != null ? configuration.backendTimeout() : defaultBackendTimeout;
 
+      // Treat a null or empty body as "no body": some CDNs/WAFs (e.g. Cloudflare) reject requests
+      // carrying an empty payload on methods that aren't expected to have one (typically GET).
       HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
             .uri(externalUrl)
             .timeout(Duration.ofMillis(timeoutMs))
-            .method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body));
+            .method(method, body == null || body.isEmpty() ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body));
 
       // Apply the configuration plan header propagation policy: strip the non-overridable baseline
       // (hop-by-hop + internal), enforce the allow/deny lists (with Authorization/Cookie denied by

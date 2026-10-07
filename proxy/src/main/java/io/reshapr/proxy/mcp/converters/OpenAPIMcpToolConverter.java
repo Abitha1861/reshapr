@@ -190,8 +190,10 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
       }
 
       try {
-         // Serialize remaining arguments as the request body.
-         String body = mapper.writeValueAsString(request.arguments());
+         // Serialize remaining arguments as the request body. If no arguments are left (e.g. a GET call
+         // with no body parameters), don't send an empty "{}" payload: some CDNs/WAFs (e.g.Ns/WAFs (e.g.
+         // Cloudflare) reject requests carrying a body on methods that aren't expected to have one.
+         String body = request.arguments().isEmpty() ? null : mapper.writeValueAsString(request.arguments());
 
          // Execute the proxy service and return response.
          headers = sanitizeHttpHeaders(headers);
