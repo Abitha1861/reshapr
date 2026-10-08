@@ -33,6 +33,7 @@ import jakarta.annotation.Nullable;
  * @param sessionId The MCP session ID, if available.
  * @param sourceIp The remote IP address of the caller.
  * @param userId The authenticated user ID (JWT subject), if available.
+ * @param codeMode The Code Mode execution details, if the call was an {@code execute_code} one.
  * @author laurent
  */
 public record AuditEvent(
@@ -49,9 +50,29 @@ public record AuditEvent(
       @Nullable String sourceIp,
       @Nullable String userId,
       long responseSize,
-      @Nullable String traceId
+      @Nullable String traceId,
+      @Nullable CodeModeInfo codeMode
 ) {
    /** Convenience constants for outcome values. */
    public static final String OUTCOME_SUCCESS = "success";
    public static final String OUTCOME_FAILURE = "failure";
+
+   /** Build an audit event for a call that is not a Code Mode execution. */
+   public AuditEvent(String method, @Nullable String targetName, String outcome, @Nullable Integer errorCode,
+                     long durationMs, String serviceName, String serviceVersion, String organizationId,
+                     @Nullable Object requestId, @Nullable String sessionId, @Nullable String sourceIp,
+                     @Nullable String userId, long responseSize, @Nullable String traceId) {
+      this(method, targetName, outcome, errorCode, durationMs, serviceName, serviceVersion, organizationId,
+            requestId, sessionId, sourceIp, userId, responseSize, traceId, null);
+   }
+
+   /**
+    * The model-authored snippet an {@code execute_code} call carried.
+    * The {@code hash} is what links this record to the gateway application log, which always names the
+    * snippet by its digest but only carries the body when auditing is on.
+    * @param hash A short, stable digest of the submitted code.
+    * @param code The submitted code itself, or {@code null} when only the digest is retained.
+    */
+   public record CodeModeInfo(String hash, @Nullable String code) {
+   }
 }

@@ -17,6 +17,7 @@ package io.reshapr.proxy.mcp;
 
 import io.reshapr.proxy.audit.AuditEvent;
 import io.reshapr.proxy.audit.AuditLogger;
+import io.reshapr.proxy.mcp.code.CodeModeDigest;
 import io.reshapr.proxy.mcp.code.CodeModeExecutor;
 import io.reshapr.proxy.mcp.code.CodeModeTools;
 import io.reshapr.proxy.mcp.converters.McpToolConverter;
@@ -976,6 +977,7 @@ public class McpController {
       String sourceIp = serverRequest.remoteAddress() != null ? serverRequest.remoteAddress().host() : null;
       SessionInfo sessionInfo = getSessionInfo(serverRequest);
       String sessionId = sessionInfo != null ? sessionInfo.getId() : null;
+      boolean codeModeExposition = configuration.effectiveToolExposureMode().exposesCodeMode();
 
       final McpSchema.JSONRPCRequest finalRequest = request;
 
@@ -1017,7 +1019,7 @@ public class McpController {
                method, targetName, outcome, errorCode, durationMs,
                serviceName, serviceVersion, organizationId,
                requestId, sessionId, sourceIp, userId,
-               responseSize, traceId
+               responseSize, traceId, extractCodeModeInfo(codeModeExposition, targetName, finalRequest)
          );
          auditLogger.logMcpCall(event);
       });
@@ -1030,5 +1032,28 @@ public class McpController {
          return sessionStore.getSessionInfo(sessionIdHeader);
       }
       return null;
+   }
+
+   /**
+    * Extract the Code Mode details of an {@code execute_code} call, so the submitted snippet lands in the
+    * audit trail and not only in the gateway application log.
+    * The snippet is read from the request parameters the controller already holds; the tool calls it derived
+    * are not collected here, because they are child spans of the very same trace and the audit record
+    * carries that trace id.
+    * @param codeModeExposition Whether the exposition exposes the Code Mode meta-tools at all.
+    * @param targetName The name of the called tool.
+    * @param request The JSON-RPC request carrying the arguments.
+    * @return The Code Mode details, or {@code null} when the call is not a Code Mode execution.
+    */
+   @Nullable
+   private AuditEvent.CodeModeInfo extractCodeModeInfo(boolean codeModeExposition, @Nullable String targetName,
+                                                       McpSchema.JSONRPCRequest request) {
+      if (!codeModeExposition || !CodeModeTools.EXECUTE_CODE.equals(targetName)
+            || !(request.params() instanceof Map<?, ?> paramsMap)
+            || !(paramsMap.get("arguments") instanceof Map<?, ?> argumentsMap)
+            || !(argumentsMap.get("code") instanceof String code)) {
+         return null;
+      }
+      return new AuditEvent.CodeModeInfo(CodeModeDigest.of(code), code);
    }
 }

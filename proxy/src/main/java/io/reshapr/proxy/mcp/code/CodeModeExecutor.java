@@ -250,11 +250,18 @@ public class CodeModeExecutor {
       }
 
       List<ExposedTool> tools = exposedTools();
+      // Written whether or not an OpenTelemetry collector is around: in a plain deployment, or in dev mode
+      // where the audit pipeline silently drops everything, this line is the only surviving record of what
+      // the model asked the gateway to run. The digest is shared with the structured audit event, so the two
+      // views of one execution can be joined. Nothing is logged at INFO when auditing is off: recording the
+      // identity of a snippet would contradict the operator who deliberately turned auditing off.
+      String codeHash = CodeModeDigest.of(code);
       if (exposition.configuration().audit()) {
-         logger.infof("Code Mode execute_code on exposition '%s' (service '%s'): %d chars, %d tools allowed%n%s",
-               exposition.id(), exposition.service().name(), code.length(), tools.size(), code);
+         logger.infof("Code mode script %s submitted on exposition '%s' (service '%s', %d chars, %d tools allowed):%n%s",
+               codeHash, exposition.id(), exposition.service().name(), code.length(), tools.size(), code);
       } else {
-         logger.debugf("Code Mode execute_code on exposition '%s': %d chars", exposition.id(), code.length());
+         logger.debugf("Executing code mode script %s on exposition '%s' (%d chars, %d tools allowed)",
+               codeHash, exposition.id(), code.length(), tools.size());
       }
 
       // The allow-list is derived from the configuration plan rather than declared by the script: Code Mode

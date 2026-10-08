@@ -69,6 +69,10 @@ public class AuditLogger {
    private static final AttributeKey<Long> MCP_ERROR_CODE = AttributeKey.longKey("mcp.error.code");
    private static final AttributeKey<Long> MCP_RESPONSE_SIZE = AttributeKey.longKey("mcp.response.size");
 
+   /** Code Mode: the snippet an {@code execute_code} call carried, and its stable digest. */
+   private static final AttributeKey<String> MCP_CODE = AttributeKey.stringKey("mcp.code");
+   private static final AttributeKey<String> MCP_CODE_HASH = AttributeKey.stringKey("mcp.code.hash");
+
    private static final AttributeKey<String> SOURCE_IP = AttributeKey.stringKey("source.ip");
    private static final AttributeKey<String> USER_ID = AttributeKey.stringKey("user.id");
 
@@ -129,6 +133,9 @@ public class AuditLogger {
       if (event.userId() != null) {
          sb.append(", user=").append(event.userId());
       }
+      if (event.codeMode() != null) {
+         sb.append(", code=").append(event.codeMode().hash());
+      }
       return sb.toString();
    }
 
@@ -163,6 +170,12 @@ public class AuditLogger {
       }
       if (event.traceId() != null) {
          ab.put(TRACE_ID, event.traceId());
+      }
+      if (event.codeMode() != null) {
+         ab.put(MCP_CODE_HASH, event.codeMode().hash());
+         if (event.codeMode().code() != null) {
+            ab.put(MCP_CODE, event.codeMode().code());
+         }
       }
       return ab.build();
    }
