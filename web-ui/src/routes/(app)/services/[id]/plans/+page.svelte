@@ -38,9 +38,9 @@
 	RefreshIcon,
 	Copy01Icon,
 	Tick02Icon,
-	UserLockIcon,
+	UserLock01Icon,
 	Key01Icon,
-	MessageLockIcon
+	MessageLock02Icon
 	} from '@hugeicons/core-free-icons';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -101,7 +101,7 @@
 	const CRED_META: Record<CredKind, { label: string; classes: string; icon: any }> = {
 	basic: {
 		label: 'User / password',
-		icon: UserLockIcon,
+		icon: UserLock01Icon,
 		classes: 'bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400'
 	},
 	token: {
@@ -111,7 +111,7 @@
 	},
 	elicitation: {
 		label: 'Elicitation',
-		icon: MessageLockIcon,
+		icon: MessageLock02Icon,
 		classes: 'bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400'
 	},
 		unknown: {
