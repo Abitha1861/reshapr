@@ -45,7 +45,6 @@
 		Search01Icon,
 		ArrowRight01Icon
 	} from '@hugeicons/core-free-icons';
-	import { ApiGatewayIcon, Key01Icon, PulseIcon, TagsIcon, RefreshIcon } from '@hugeicons/core-free-icons';
 	import ApiTokensTab from './ApiTokensTab.svelte';
 
 	const QUOTA_METRIC = 'gateway.count';
